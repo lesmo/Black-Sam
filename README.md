@@ -5,7 +5,7 @@ The Internet's pretty useful, but different agents are making it more and more d
 There are torrents out there with valuable information about corrupt companies and governments, survival, advice, and a valuable way for indie photographers, directors, musicians and game developers to share and distribute their work. Why stop that from happening?
 
 ## What is it?
-**BlackSam** is a _simple_ torrent search and upload software for **Node.js** you can quickly get up and running in your computer, server or cloud service, _**without any database**_. This effectively allows to share, browse, edit and restore the entire "database" of torrents easily, perhaps using a Torrent on itself, BitTorrent's Sync, Syncthing, a WebDAV or any other network distribution mechanism.
+**BlackSam** is a _simple_ torrent search and upload software for **Node.js** (like that used on The Pirate Bay, Iso Hunt or similars) you can quickly get up and running in your computer, server or cloud service, _**without any database**_. This effectively allows to share, browse, edit and restore the entire "database" of torrents easily, perhaps using a Torrent on itself, BitTorrent's Sync, Syncthing, a WebDAV or any other network distribution mechanism.
 
 ## How do I install it?
 You can't. It's not ready yet.
@@ -24,7 +24,7 @@ When a user registers, a new directory is created inside the ```marianne``` dire
 
  This means the user will login with a _username_ and _password_ combination that can still be anonymous, and is nearly impossible crack or guess. This also means that there is effectively no password reset available.
 
- If the user chooses to be displayed as the uploader of her torrents, **BlackSam** can create a _JSON_ file named ```user.json``` with "metadata" her. Only ```displayName``` and ```email``` can be set inside that _JSON_ file. _Display Name_ collisions cannot be avoided, so a [tripcode](https://github.com/KenanY/tripcode) field can be used to create small strings serving as a means of authentication. Perhaps in a next version a PGP validation can be implemented.
+ If the user chooses to be displayed as the uploader of her torrents, **BlackSam** can create a _JSON_ file named ```user.json``` with "metadata" about her. Only ```displayName``` and ```email``` can be set inside that _JSON_ file. _Display Name_ collisions cannot be avoided, so a [tripcode](https://github.com/KenanY/tripcode) field can be used to create small strings serving as a means of authentication. Perhaps in a next version a PGP validation can be implemented.
 
 ### Torrent storage
 When a user uploads a _Torrent File_ or a _Magnet Link_, **BlackSam** creates 3 files inside the ```marianne/<uploader hash>``` directory. _Metafiles_'s hash (seen in by _Magnet Links_) are used as the filename for these 3 files.
