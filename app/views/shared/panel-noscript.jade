@@ -1,0 +1,9 @@
+unless connection && (connection.ssl || connection.tor)
+   noscript
+      .panel.panel-danger
+         .panel-heading
+            h3.panel-title JavaScript is disabled
+         .panel-body
+            p This entire website works without JavaScript too, however SSL encryption is not being used on this page which means <strong>this form will be submitted to the server in plain-text</strong>.
+            p A direct connection from you and this server through Tor is not being used either, so anybody eavesdropping your connection, or the Tor exit node you've been routed through, can easily recover any information you enter here.
+            p Consider enabling JavaScript, at least for the submission of this form, so a JavaScript-based solution is used for encrypting this form, connect directly to one of the <a href="#">Tor Hidden Services</a>, or an <a href="#">SSL enabled server</a>.
