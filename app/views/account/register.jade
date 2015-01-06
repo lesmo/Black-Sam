@@ -1,0 +1,48 @@
+extends ../layout
+
+block head
+   != css('css/login-register')
+block footer_js
+   != js('cryptojslib/components/ripemd160-min.js')
+   != js('cryptojslib/components/sha256-min.js')
+   != js('cryptojslib/components/sha512-min.js')
+   != js('js/register')
+block content
+   form.login-register.register(method='post')
+      input(type='hidden', name='_csrf', value= csrf_token())
+      input#hiddenUserhash(type='hidden', name='userhash')
+
+      h2 Register
+      .panel.panel-info
+         .panel-heading
+            h3.panel-title This is only needed for uploaders
+         .panel-body
+            p There is no additional functionality available for registered accounts, other than the uploading of new Torrents and (optionally) authenticating you're the uploader.
+
+      include shared/panel-noscript
+
+      if errors.userTaken
+         .alert.alert-danger An account with the <strong>exact same User Name and Password</strong> already exists. Choose another combination and try again.'
+
+      .form-group
+         #errorUsernameLength.alert.alert-danger(style=errors.userTooShort ? '' : 'display:none') Check to see if it's at least 8 characters long, but less than 128.
+
+         label.sr-only(for='textboxUsername') User Name
+         input#textboxUsername.form-control(type='text', name='username', placeholder='User Name', aria-describedby='helpblockUsername', required)
+         span#helpblockUsername
+            small Your <strong>User Name</strong> can contain any character, must be at least 8 characters long and up to a maximum of 128. Use of spaces is discouraged, but it's possible to use them. Nobody can read this until you setup a <strong>Display Name</strong>.
+      .form-group
+         #errorPasswordLength.alert.alert-danger(style=errors.passTooShort ? '' : 'display:none') Check to see if it's at least 8 characters long, but less than 128.
+         #errorPasswordMatch.alert.alert-danger(style=errors.passMismatch ? '' : 'display:none') Passwords do not match.
+
+         label.sr-only(for='textboxPassword') Password
+         input.form-control.joined-top#textboxPassword(type='password', name='password', placeholder='Password', aria-describedby='helpblockPassword', required)
+         label.sr-only(for='textboxPasswordRepeat') Password
+         input.form-control.joined-bottom#textboxPasswordRepeat(type='password', name='password_repeat', placeholder='Repeat Password', required)
+         span#helpblockPassword
+            small Your <strong>Password</strong> can contain any character, must be at least 8 characters long and up to a maximum of 128. Use of spaces is discouraged, but it's possible to use them.
+
+      .alert.alert-danger Remember it's very important for you to keep this credentials safe and never lose or forget them because <strong>THERE IS ABSOLUTELY NO WAY TO RECOVER THEM</strong>.
+
+      .form-group
+         button.btn.btn-lg.btn-info.btn-block(type='submit') Register

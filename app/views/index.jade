@@ -1,0 +1,37 @@
+extends layouts/bare
+block head
+  != css('css/index')
+block body
+    .site-wrapper
+      .site-wrapper-inner
+        .cover-container
+          .masthead.clearfix
+            .inner
+              nav
+                ul.nav.masthead-nav
+                  li
+                    a(href='#') Browse
+                  li
+                    a(href='#') Login
+          .inner.cover
+            form
+              .form-group
+                label(for='search-box').sr-only Search
+                input(type='text', placeholder='Search the seven seas').form-control.input-lg#search-box
+
+              .btn-group
+                button(type='submit').btn.btn-lg.btn-primary Search
+                button(type='button', data-toggle='dropdown', aria-expanded='false').btn.btn-lg.btn-primary.dropdown-toggle
+                  span.caret
+                  span.sr-only Toggle search category
+                ul.dropdown-menu
+                  li
+                    a(href='#') Games
+                  li
+                    a(href='#') Games
+                  li
+                    a(href='#') Games
+          .mastfoot
+            .inner
+              p Powered by&nbsp;
+                a(href='#') BlackSam

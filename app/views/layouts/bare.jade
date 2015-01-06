@@ -1,0 +1,25 @@
+doctype html
+html(lang="en")
+   head
+      meta(charset="utf-8")
+      meta(http-equiv="X-UA-Compatible", content="IE=edge")
+      meta(name="viewport", content="width=device-width, initial-scale=1")
+
+      title BlackSam
+      != css('bootswatch-dist/css/bootstrap')
+      != css('css/blacksam')
+
+      block head
+
+      <!--[if lt IE 9]>
+      != js('lt-ie-9/lt-ie-9.min.js')
+      <![endif]-->
+   body
+      #background
+      block body
+
+      != js('jquery/dist/jquery')
+      != js('bootswatch-dist/js/bootstrap')
+      != js('js/shared')
+
+      block footer_js

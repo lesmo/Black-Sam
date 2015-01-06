@@ -1,0 +1,46 @@
+extends layout
+
+mixin torrent
+   span.wide
+      span.panel.panel-default
+         span.panel-heading
+            span.row
+               span.title.col-xs-12
+                  img(src='//cdn4.iconfinder.com/data/icons/small-n-flat/24/file-word-128.png')
+                  strong= torrent.title
+         span.panel-body
+            span.row
+               span.uploader.col-xs-4
+                  small= 'by' + torrent.uploader
+               span.counts.col-xs-8
+                  small
+                     span.badge= torrent.seeds
+                     | &nbsp;
+                     | seeds
+                  | &nbsp;
+                  small
+                     span.badge= torrent.leechs
+                     | &nbsp;
+                     | leechs
+            span.row
+               span.col-xs-12
+                  span.well.description
+                     if torrent.description
+                        != helpers.markdown(torrent.description)
+                     else
+                        p <i>No description available</i>
+         span.panel-footer
+            span.row
+               span.col-xs-12
+                  .btn-group.btn-group-sm
+                     a(href=torrent.magnet).btn.btn-success
+                        | Magnet Link
+                     a(href=helpers.url.torrent_url_file(torrent.id)).btn.btn-success
+                        | Download Torrent
+
+if useAjaxLayout
+   .item.col-sm-12.col-md-8
+      +torrent
+else
+   .item.col-xs-12
+      +torrent

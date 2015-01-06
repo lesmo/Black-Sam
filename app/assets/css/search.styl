@@ -1,0 +1,47 @@
+#background
+  opacity 0.13
+  background-image url(/img/search-background.jpg)
+
+#content
+  .row
+    @media (min-width: 992px)
+      padding 0 13%
+    @media (min-width: 768px)
+      padding 0 4%
+
+  .item
+    small
+      font-size 88%
+
+    .title
+      img
+        max-width 24px
+        margin-right 10px
+
+    .title, .uploader
+      overflow hidden
+      text-overflow ellipsis
+      white-space nowrap
+
+    .counts
+      text-align right
+      display inline-block
+
+    > a
+      &:hover
+        text-decoration none
+
+      &:not(.wide)
+        opacity 0.7
+
+        &:hover
+          opacity 1
+
+    .wide
+      .title
+        padding 0
+      .description
+        margin 15px 0 0 0
+
+    span:not(.badge)
+      display block

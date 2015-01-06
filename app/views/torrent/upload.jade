@@ -1,0 +1,79 @@
+extends layout
+
+block head
+   != css('css/upload')
+block content
+   form(method='post')
+      .row
+         .col-sm-10.col-sm-offset-1
+            h2 Contribute new Torrent
+
+            .alert.alert-info
+               p You're very unlikely to be able to upload files because your device is known not to support the storage of regular files outside of multimedia types. You may not be able to upload a *.torrent file or sign this contribution.
+
+            .row
+               .col-md-4
+                  .row
+                     .col-sm-6.col-md-12
+                        .form-group
+                           h3 Source
+                              small &nbsp;(required)
+                           p No matter which format you choose to use, both ways of downloading the Torrent will be stored. Depending on the server settings, one or both will be made available to the end user.
+
+                           p
+                              label.sr-only(for='textboxMagnet') Enter a Magnet Link
+                              input#textboxMagnet.form-control(type='text', name='torrent_magnet', placeholder='Magnet Link')
+                           p.text-center
+                              small#labelTorrentOr - or -
+                           p.text-center
+                              span#spanTorrentChooser.file-chooser
+                                 label.btn.btn-primary(for='fileTorrent') Upload *.torrent file
+                                 input#fileTorrent.btn.btn-default(type='file', name='torrent_file')
+
+                     .col-sm-6.col-md-12
+                        .form-group
+                           h3 Category
+                              small &nbsp;(required)
+                           p Pick the best category this Torrent fits into. Use <strong>Others</strong> when no other category seems to be adequate.
+               .col-md-8
+                  .form-group
+                     h3 Title
+                        small &nbsp;(required)
+                     p Provide a title for this Torrent. Be as descriptive and concise in this field as possible, as this is the first thing users see while browsing or searching.
+                     input.form-control(type='text', name='torrent_title', placeholder='Torrent Title')
+                  .form-group
+                     h3 Description
+                     p You can enter a description here, but you can skip it. This supports <strong>Markdown Syntax</strong>, so you can provide richer descriptions to users about this Torrent. Make an effort to properly describe the Torrent, as this text's contents are used for the search index.
+
+                     p
+                        textarea.form-control(style='min-height:300px', name='torrent_description')
+
+                     p.javascript-only If you preffer, you can also click "Retrieve from README in Torrent" to automatically fill this for you from a README file inside this Torrent:
+                     p.javascript-only.text-center
+                        button.btn.btn-primary(type='button') Retrieve from README in Torrent
+            // functionality is not ready yet
+               .row
+                  .col-md-4
+                     .panel
+                        .panel-heading
+                           h3.panel-title Upload is not immediate
+                        .panel-body
+                           p This Torrent will be checked for validity to make sure it exists and at least 1 seeder is available. Torrents with no seeders for more than 72 hours are automatically deleted by all nodes.
+                  .col-md-8
+                     .form-group
+                        h3 Signing
+                        p Your account has no <strong>Public Key</strong> cryptography configured so you can't sign a Torrent upload yet. If you want to do so, you can set it up&nbsp;
+                           a(href='#') by clicking here
+                        p You can authenticate to other users this download comes from you by signing this contribution with your <strong>Private Key</strong>. You can do this process offline by generating a signature of either the SHA-1 hash of the *.torrent file or the Magnet Link Metadata Hash with OpenSSL and entering it below.
+                        .javascript-only
+                           .html5-only
+                              p Because your browser doesn't seem to support FileAPI, when you click Generate Signature you'll be requested to paste your Private Key contents. Don't worry, the form input for that dialog points to your localhost (in case something goes wrong and the form is submitted) and its contents are removed from memory as soon as the signature is generated.
+                           p.text-center
+                              button#buttonGenerateSignature.btn.btn-primary Generate Signature in the Browser
+                        p
+                           textarea.form-control(type='text', name='torrent_signature')
+            .row
+               .col-xs-12
+                  .form-group
+                     p.text-center
+                        button.btn.btn-success.btn-lg(type='submit') Submit new Torrent

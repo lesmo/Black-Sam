@@ -1,0 +1,29 @@
+extends ../layout
+
+block head
+   != css('css/login-register')
+   != js('cryptojslib/components/ripemd160-min.js')
+   != js('cryptojslib/components/sha256-min.js')
+   != js('cryptojslib/components/sha512-min.js')
+   != js('js/login')
+block content
+   form.login-register.login(method='post')
+      input(type='hidden', name='_csrf', value= csrf_token())
+      input#hiddenUserhash(type='hidden', name='userhash')
+
+      if errors.failed
+         .alert.alert-danger User Name and Password combination are invalid. Try again, or <a href="/account/new">create an account</a>.
+
+      h2 Login
+      include shared/panel-noscript
+
+      .form-group
+         label.sr-only(for='textboxUsername') User name
+         input#textboxUsername.form-control.joined-top(type='text', autofocus, required, placeholder='User Name')
+         label.sr-only(for='textboxPassword') Password
+         input#textboxPassword.form-control.joined-bottom(type='password', required, placeholder='Password')
+      .form-group.checkbox
+         label
+            input(type='checkbox', value='remember')
+            | Remember me
+      button.btn.btn-lg.btn-info.btn-block(type='submit') Login

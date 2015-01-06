@@ -1,0 +1,58 @@
+extends layout
+
+mixin search_item(torrent)
+   .item.col-sm-6.col-md-4
+      a(href!=helpers.url.torrent_url(torrent.id))
+         span.panel.panel-default
+            span.panel-heading
+               span.row
+                  span.title.col-xs-12
+                     img(src=helpers.url.torrent_cat_icon(torrent.cat))
+                     strong= torrent.title
+            span.panel-body
+               span.row
+                  span.uploader.col-xs-4
+                     small= 'by ' + torrent.uploader
+                  span.counts.col-xs-8
+                     small
+                        span.badge= torrent.seeds
+                        | &nbsp;
+                        | seeds
+                     | &nbsp;
+                     small
+                        span.badge= torrent.leechs
+                        | &nbsp;
+                        | leechs
+
+block head
+   != css('css/search')
+block content
+   .row
+      each torrent in results
+         +search_item(torrent)
+   .row
+      .col-xs-12
+         nav.text-center
+            ul.pagination
+               if paging.current > paging.total
+                  li
+                     a(href=helpers.url.search(query, paging.current - 1), aria-label='Previous')
+                        span(aria-hidden='true') &laquo;
+
+               - var p = paging.current - 4
+               if p < 0
+                  - p = 0
+
+               while p < paging.total || paging.current + 4
+                  li
+                     if p == paging.current
+                        a(href='#')= p
+                     else
+                        a(href=helpers.url.search(query, p))= p
+                  - p++
+
+               if paging.current < paging.total
+                  li
+                     a(href=helpers.url.search(query, paging.current + 1), aria-label='Next')
+                        span(aria-hidden='true') &raquo;
+                        span(aria-hidden='true') &raquo;
