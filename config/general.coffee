@@ -13,6 +13,11 @@ module.exports = (config) ->
   # User for "signing" session cookies
   config.set 'session secret', 'REPLACE THIS BEFORE STARTNG'
 
+  # Max file Size
+  # Any file can never exceed this size. Any files exceeding this are
+  # discarded, deleted or ignored (depending on the case). In bytes.
+  config.set 'max file size', 1024 * 1024 * 1024 #1mb
+
   # Path to the "marianne" directory
   # All user directories and torrents are stored here
   config.set 'marianne path', "#{__dirname}/../marianne"
