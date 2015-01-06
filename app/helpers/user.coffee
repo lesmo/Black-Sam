@@ -5,9 +5,8 @@ module.exports = (helpers) ->
     q = require 'q'
 
     @middleware = (err, req, res, next) ->
-      res.locals.user = req.user = {
+      res.locals.user = req.user =
         loggedIn: @exists(req.session.userhash)
-      }
 
       next()
 
@@ -23,7 +22,7 @@ module.exports = (helpers) ->
       return hash.match /^[0-9a-f]{40}$/i
 
     @getPath = (hash) ->
-      return "#{helpers.app.get('marianne_dir')}/1-#{hash.toUpperCase()}"
+      return "#{helpers.app.get('marianne dir')}/1-#{hash.toUpperCase()}"
 
     @exists = (hash) ->
       return fs.existsSync this.getPath(hash)
