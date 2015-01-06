@@ -1,7 +1,7 @@
-module.exports = (helpers) ->
-  class helpers.url
-    base32 = require 'base36'
+module.exports = (url) ->
+  base32 = require 'base36'
 
+  class url
     @torrent_mask = (hash) ->
       binary_hash = base32.decode hash
       key = String.fromCharCode(Math.random().toString().slice(2, 5))
@@ -18,8 +18,8 @@ module.exports = (helpers) ->
 
       return base32.encode result.join('')
 
-    @torrent_url      = (id) -> "/torrent/#{@torrent_mask(id)}"
-    @torrent_url_ajax = (id) -> "/torrent/#{@torrent_mask(id)}?aj=ax"
-    @torrent_url_file = (id) -> "/torrent/#{@torrent_mask(id)}.torrent"
+    @torrent      = (id) -> "/torrent/#{@torrent_mask(id)}"
+    @torrent_ajax = (id) -> "/torrent/#{@torrent_mask(id)}?aj=ax"
+    @torrent_file = (id) -> "/torrent/#{@torrent_mask(id)}.torrent"
 
     @search = (query, page) -> "/search?q=#{query}&p=#{page}"

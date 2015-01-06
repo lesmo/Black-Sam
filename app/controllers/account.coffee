@@ -1,7 +1,7 @@
-module.exports = (controllers) ->
-  class controllers.account
-    q = require 'q'
+module.exports = (account, helpers) ->
+  q = require 'q'
 
+  class account
     @routes = (router) ->
       router.use require('body-parser').urlencoded()
       router.use require('csurf')
@@ -25,18 +25,20 @@ module.exports = (controllers) ->
 
       router.post '/login', (req, res) ->
         if req.body? and not req.user.loggedIn
-          account_login req, res, req.body.userhash, req.body.username, req.body.password
+          account_login req, res,
+            req.body.userhash,
+            req.body.username,
+            req.body.password
         else
           res.render 'account/login'
 
       router.all '/logout', (req, res) ->
-        req.session.destroy ->
-          res.redirect '/'
+        req.session.destroy -> res.redirect '/'
 
     account_create = (req, res, userhash, username, password, password_repeat) ->
       accountCreatePromise =
         if userhash
-          return controllers.helpers.user.create userhash
+          return helpers.user.create userhash
         else
           e = new Error()
 
@@ -53,7 +55,7 @@ module.exports = (controllers) ->
             deferred.reject(e)
             return deferred.promise
           else
-            return controllers.helpers.user.create username, password
+            return helpers.user.create username, password
 
       accountCreatePromise.then (userhash) ->
         req.session.userhash = userhash
@@ -63,11 +65,11 @@ module.exports = (controllers) ->
 
     account_login = (req, res, userhash, username, password) ->
       if not userhash?
-        userhash = controllers.helpers.user.getHash username, password
-      else if not controllers.helpers.user.validHash userhash
+        userhash = helpers.user.getHash username, password
+      else if not helpers.user.validHash userhash
         return res.render 'account/login'
 
-      if controllers.helpers.user.exists(userhash)
+      if helpers.user.exists userhash
         req.session.userhash = userhash
         res.redirect '/'
       else

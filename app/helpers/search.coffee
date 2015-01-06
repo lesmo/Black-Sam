@@ -1,5 +1,5 @@
-module.exports = (helpers) ->
-  class helpers.search
+module.exports = (search) ->
+  class search
     @index = require('search-index') {
       indexPath: app.get('sherlock_dir'),
       logLevel: 'error'

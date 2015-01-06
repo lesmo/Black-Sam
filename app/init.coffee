@@ -4,11 +4,12 @@ module.exports = (app) ->
 
   ### Configurations ###
   # These are the defaults
+  app.set 'max file size', 1024 * 1024 * 1024 #1mb
+  app.set 'session secret', (Math.random().toString() + '056127539128').slice(2, 20)
+
   app.set 'marianne path', "#{__dirname}/../marianne"
   app.set 'sherlock path', "#{__dirname}/../sherlock"
   app.set 'sultanna path', "#{__dirname}/../sultanna"
-
-  app.set 'session secret', (Math.random().toString() + '056127539128').slice(2, 20)
 
   app.helpers.autoload "#{__dirname}/../config", {
     set: app.set
@@ -16,11 +17,15 @@ module.exports = (app) ->
     disable: app.disable
   }
 
-  # Controllers
-  app.helpers.autoload "#{__dirname}/controllers", app.controllers = {}
-
   # Helpers
-  app.helpers.autoload "#{__dirname}/helpers", app.controllers.helpers = app.locals.helpers = {app: app}
+  app.helpers.autoload "#{__dirname}/helpers", app.helpers = app.locals.helpers = {}, {
+    get: app.get
+    enabled: app.enabled
+    disabled: app.disabled
+  }
+
+  # Controllers
+  app.helpers.autoload "#{__dirname}/controllers", app.controllers = {}, app.helpers
 
   # Express configuration
   port = app.get('http port') || process.env.PORT || 3000

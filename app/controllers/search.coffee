@@ -1,7 +1,5 @@
-module.exports = (controllers) ->
-  class controllers.search
-    @index = controllers.helpers.search.index
-
+module.exports = (search, helpers) ->
+  class search
     @routes = (router) ->
       router.get '/autocomplete', (req, res) ->
         autocomplete req, res,
@@ -12,14 +10,18 @@ module.exports = (controllers) ->
           else
             null
       router.all '/', (req, res) ->
-        doSearch req, res,
+        query =
           if req.query?.q?.trim().length > 4
             req.query.q.toLowerCase()
           else if req.body?.q?.trim().length > 4
             req.body.q.toLowerCase()
           else
-            res.redirect('/')
-            return 0
+            null
+
+        if query?
+          doSearch req, res, query
+        else
+          res.redirect('/')
 
     autocomplete = (req, res, query) ->
       if query?
@@ -33,9 +35,7 @@ module.exports = (controllers) ->
 
     doSearch = (req, res, query, page = 1) ->
       cat_regex   = /cat:(.*)$/i
-      index_query =
-        query:
-          '*': query
+      index_query = query: {'*': query}
 
       cat_regex_matches = index_query.query['*'].match cat_regex
 
@@ -44,7 +44,7 @@ module.exports = (controllers) ->
         index_query.filter =
           category: cat_regex_matches[1]
 
-      @index.search {
+      helpers.search.index.search {
         query:
           '*':  query
         pageSize: 20

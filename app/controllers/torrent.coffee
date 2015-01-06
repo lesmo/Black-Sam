@@ -1,26 +1,20 @@
-module.exports = (controllers) ->
-  class controllers.torrent
-    parse_torrent = require 'parse-torrent'
-    fs = require 'fs-extra'
-    async  = require 'async'
-    log = require 'winston'
+module.exports = (torrent, helpers) ->
+  parse_torrent = require 'parse-torrent'
+  fs = require 'fs-extra'
+  async  = require 'async'
+  log = require 'winston'
 
-    helpers = controllers.helpers
-
-    max_size = 1024 * 1024 # 1mb
-
+  class torrent
     @routes = (router) ->
       router.use require('multer') {
         dest: app.get('sultanna_dir'),
         limits:
           files: 2
-          fileSize: 1024 * 1024 * 1024 #1mb
+          fileSize: helpers.config.get 'max file size'
       }
 
       router.param 'id', (req, res, next, id) ->
-        if id?
-          req.params.id = helpers.torrent_unmask id
-
+        req.params.id = helpers.torrent_unmask id if id?
         next()
 
       router.get '/new', (req, res) ->
@@ -30,10 +24,40 @@ module.exports = (controllers) ->
           res.redirect '/account/new'
 
       router.post '/new', (req, res) ->
-        if req.user.loggedIn
-          torrent_upload(req, res)
+        return res.redirect '/account/new' if not req.user.loggedIn
+        return res.render 'torrent/upload' if not req.body?
+
+        e = {}
+
+        if not req.body.torrent_magnet? and not req.files?.torrent_file?
+          e.noSourceSelected = true
+
+        category = req.body.torrent_category?.toLowerCase()
+        subcategory = req.body.torrent_subcategory?.toLowerCase()
+
+        if not helpers.config.get('categories')?[category]?
+          e.noCategorySelectd = true
+
+        if req.body.torrent_title?.length < 5
+          e.titleTooShort = true
+
+        torrent = parse_torrent if req.files.torrent_file?
+          fs.readFileSync req.files.torrent_file.path
         else
-          res.redirect '/account/new'
+          req.body.torrent_magnet
+
+        if not torrent?
+          e.invalidTorrent = true
+
+        if e is {}
+          torrent_upload req, res,
+            torrent,
+            req.body.torrent_title,
+            category,
+            subcategory,
+            req.body.torrent_description
+        else
+          res.render 'torrent/upload', errors: e
 
       router.get '/new/get-readme', (req, res) ->
         if req.query?.hash? and controllers.helpers.torrent.validHash req.query.hash
@@ -64,10 +88,7 @@ module.exports = (controllers) ->
         ], (err, files) ->
           if err or not files[1]? or not files[1].isFile() or files[1].size > max_size
             search.index.del torrent.id, (err) ->
-              if err
-                log.warn err
-              else
-                log.warn "[#{torrent_id}.torrent] is not a file, or too large. Deleted from Search Index"
+              log.warn err or "[#{torrent_id}.torrent] is not a file, or too large. Deleted from Search Index"
 
               next()
           else
@@ -87,10 +108,7 @@ module.exports = (controllers) ->
           fs.stat "#{torrent_store_path}.torrent", (err, file) ->
             if err or not file.isFile() or file.size > max_size
               helpers.search.index.del torrent.id, (err) ->
-                if err
-                  log.warn err
-                else
-                  log.warn "[#{torrent_id}.torrent] is not a file, or too large. Deleted from Search Index"
+                log.warn err or "[#{torrent_id}.torrent] is not a file, or too large. Deleted from Search Index"
 
                 next()
             else
@@ -103,46 +121,31 @@ module.exports = (controllers) ->
         else
           res.status(200).json readme
 
-    torrent_upload = (req, res) ->
-      if not req.body?
-        return res.render 'torrent/upload'
+    torrent_upload = (req, res, torrent, title, category, subcategory, description) ->
+      torrent_store_path = helpers.torrent.getLocalPath(
+        req.session.userhash,
+        category,
+        subcategory,
+        torrent.infoHash
+      )
 
-      e = {}
-
-      if not req.body.torrent_magnet? and not req.files?.torrent_file?
-        e.noSourceSelected = true
-      # TODO: Validate category
-      if req.body.torrent_title?.length < 5
-        e.titleTooShort = true
-
-      if not e is {}
-        return res.render 'torrent/upload', errors: e
-
-      torrent = parse_torrent if req.files.torrent_file?
-        fs.readFileSync req.files.torrent_file.path
-      else
-        req.body.torrent_magnet
-
-      torrent_store_path = "#{controllers.app.get('marianne_dir')}/#{req.session.userhash}/#{torrent.infoHash.toUpperCase()}"
-
-      if not torrent?
-        return res.render 'torrent/validation_failed', errors: {invalid: true}
       if fs.existsSync "#{torrent_store_path}.torrent"
         return res.render 'torrent/validation_failed', errors: {alreadyExists: true}
 
       helpers.torrent.getMetadata torrent, (err, metadata, parsed_torrent) ->
         if err
-          res.render 'torrent/validation_failed', errors: {invalid: true}
-        else
-          torrent_buffer = parse_torrent.toTorrentFile parsed_torrent
-          metadata.magnet = parse_torrent.toMagnetURI parsed_torrent
+          return res.render 'torrent/validation_failed', errors: {invalid: true}
 
-          fs.outputFile "#{torrent_store_path}.torrent", torrent_buffer, (err) ->
-            if err
-              res.render 'torrent/validation_failed', errors: {unexpectedError: err}
-            if req.body.torrent_description?.length > 8
-              fs.outputFile "#{torrent_store_path}.md", req.body.torrent_description
-              metadata.description = req.body.torrent_description
+        torrent_buffer = parse_torrent.toTorrentFile parsed_torrent
+        metadata.magnet = parse_torrent.toMagnetURI parsed_torrent
 
-            helpers.search.addTorrent metadata
-            res.render 'torrent/upload_successful'
+        fs.outputFile "#{torrent_store_path}.torrent", torrent_buffer, (err) ->
+          if err
+            return res.render 'torrent/validation_failed', errors: {unexpectedError: err}
+
+          if description?.length > 8
+            fs.outputFile "#{torrent_store_path}.md", description
+            metadata.description = description
+
+          helpers.search.indexTorrent metadata
+          res.render 'torrent/upload_successful'

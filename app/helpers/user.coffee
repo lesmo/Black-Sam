@@ -1,4 +1,4 @@
-module.exports = (helpers) ->
+module.exports = (helpers, cfg) ->
   class helpers.user
     crypto = require('cryptojs').Crypto
     fs = require 'fs-extra'
@@ -21,8 +21,8 @@ module.exports = (helpers) ->
     @validHash = (hash) ->
       return hash.match /^[0-9a-f]{40}$/i
 
-    @getPath = (hash) ->
-      return "#{helpers.app.get('marianne dir')}/1-#{hash.toUpperCase()}"
+    @getPath = @getLocalPath = (hash) ->
+      return "#{cfg.get('marianne dir')}/1-#{hash.toUpperCase()}"
 
     @exists = (hash) ->
       return fs.existsSync this.getPath(hash)

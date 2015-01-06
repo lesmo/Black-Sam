@@ -1,16 +1,17 @@
 fs = require 'fs'
 
 # Recursively require a folder’s files
-exports.autoload = autoload = (dir, app) ->
+exports.autoload = autoload = (dir, obj, arg) ->
   fs.readdirSync(dir).forEach (file) ->
-    path = "#{dir}/#{file}"
-    stats = fs.lstatSync(path)
+    path  = "#{dir}/#{file}"
+    stats = fs.lstatSync path
 
     # Go through the loop again if it is a directory
     if stats.isDirectory()
-      autoload path, app
+      autoload path, obj, arg
     else
-      require(path)?(app)
+      cls = file.match(/(.*)\..*$/i)[1]
+      require(path)? obj[cls] = {}, arg
 
 # Return last item of an array
 # ['a', 'b', 'c'].last() => 'c'
