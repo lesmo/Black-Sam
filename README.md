@@ -16,24 +16,24 @@ You can't. It's not ready yet.
 Where do we store all data? In the File System, obviously. All data is stored in a subdirectory where **BlackSam** is installed, which is named -you guessed it- ```marianne``` . Oh, you didn't guess it? That's [a name for the goddess of freedom](http://en.wikipedia.org/wiki/Marianne), and also the name of the first ship _Black Sam_ sailed as captain.
 
 ### User management
-When a user registers, a new directory is created inside the ```marianne``` directory with the name of the RIPEMD-160 hash of the SHA-512 of the username and password, prefixed with ```1-```, called _User Hash_:
+When a user registers, a new directory is created inside the ```marianne``` directory with the name of the RIPEMD-160 hash of the SHA-256 hash of the SHA-512 of the username and password, prefixed with ```1-```, called _User Hash_:
 
  ```
  "1-" + ripemd(sha256(sha512(<username> + <password>)))
  ```
  
- The ```1-``` prefix is the _User Hash Version_. If in future releases new and better mechanisms are implemented, this prefix can be changed to anything else to accommodate that change.
+The ```1-``` prefix is the _User Hash Version_. If in future releases new and better mechanisms are implemented, this prefix can be changed to anything else to accommodate that change.
 
 Because of the way **BlackSam** keeps all _Ships_ (or _nodes_ for non-pirate lads) in sync, users cannot change their username or password (see Replication section for details). This means the user will login with a _username_ and _password_ combination that can still be anonymous, and is nearly impossible crack or guess. This also means that there is effectively no password reset available at all, and one is very likely to never be implemented.
 
-Other files provide more data for **BlackSam**'s behaviour, but because of the "create only" nature of it's sync methods, once they're created they cannot be deleted. These mechanisms allow **BlackSam** to validate all ```user.*``` files, so adversaries cannot create a _Denial of Service_ on any user.
+Other files provide more data for **BlackSam**'s behaviour, but because of the "create only" nature of it's sync methods, once they're created they cannot be deleted. Some mechanisms allow **BlackSam** to validate all ```user.*``` files, so adversaries cannot create a _Denial of Service_ on any user.
 
 #### user.json
 If a user chooses to be displayed as the uploader of her torrents, **BlackSam** can create a _JSON_ file named ```user.<display name>.json``` with _metadata_ about her. Different information can be inside, but for now only ```seedhash``` with the SHA-256 hash of the username and password combined as value is used.
 
 When a user requests a new username and password combination, and the user decides she'd like to keep her _Display Name_, the previous account is locked and the metadata file is re-created in the new _User Hash_ directory, preventing anyone from registering the old _Display Name_ while this process occurs. **BlackSam** _Ships_ will recognize this behaviour and delete local ```user.<display name>.json``` files.
 
-If a ```user.<display name>.json``` file is created all uploads by that user will show a "by <user name>" label under the Torrent on search results and browse sections. If the upload is not _signed_, a warning icon will be shown next to it; correctly _signed_ uploads will show a green tick mark instead.
+If a ```user.<display name>.json``` file is created all uploads by that user will show a "by <user name>" label under the Torrent on search results and browse sections. If the upload is not _signed_, a warning icon will be shown next to it; correctly _signed_ uploads will show a green tick mark instead, along with a link to retrieve the public key and the signature validated by **BlackSam**.
 
 #### user.pem
 For authentication of Torrent contributions when users choose to do so, a public-key file ```user.pem``` can be created when the user generates one on her browser, or uploads one if opted for creating it offline.
