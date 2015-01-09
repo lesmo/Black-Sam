@@ -1,15 +1,25 @@
-module.exports = (helpers, cfg) ->
-  class helpers.user
-    crypto = require('cryptojs').Crypto
-    fs = require 'fs-extra'
-    q = require 'q'
+module.exports = (cfg) ->
+  crypto = require('cryptojs').Crypto
+  fs = require 'fs-extra'
+  q = require 'q'
 
+  ###
+    Facilitates the interaction with User Accounts, their folders, hashing and validations.
+  ###
+  class user
+    ###
+      The Middleware associates the User object to the {req} object, and
+      the templating engine {user}.
+    ###
     @middleware = (err, req, res, next) ->
       res.locals.user = req.user =
         loggedIn: @exists(req.session.userhash)
 
       next()
 
+    ###
+      Calculate a User Hash for a given {username} and {password}.
+    ###
     @getHash = (username, password) ->
       hash = username + password
       hash = crypto.SHA512(hash).toString()
@@ -18,15 +28,43 @@ module.exports = (helpers, cfg) ->
 
       return hash
 
+    ###
+      Checks if a given {hash} could be a valid User Hash.
+    ###
     @validHash = (hash) ->
-      return hash.match /^[0-9a-f]{40}$/i
+      regex_match = hash.match /^(1\-)?([0-9a-f]{40})$/i
 
+      if regex_match?.length is 3
+        return regex_match[2].toUpperCase()
+      else
+        return undefined
+
+    ###
+      Calculates the path a User Hash would be located at.
+    ###
     @getPath = @getLocalPath = (hash) ->
-      return "#{cfg.get('marianne dir')}/1-#{hash.toUpperCase()}"
+      hash = @validHash hash
 
+      if hash
+        return "#{cfg.get('marianne dir')}/#{@validHash hash}"
+      else
+        return undefined
+
+    ###
+      Checks if a User Folder exists for the given User Hash.
+    ###
     @exists = (hash) ->
-      return fs.existsSync this.getPath(hash)
+      path = @getPath hash
 
+      if path
+        return fs.existsSync path
+      else
+        return false
+
+    ###
+      Creates a new User Account with the given User Hash or User Name and
+      Password combination.
+    ###
     @create = (username, password) ->
       deferred = q.defer()
 
@@ -35,11 +73,11 @@ module.exports = (helpers, cfg) ->
       else
         userhash = username.toUpperCase()
 
-        if not @validHash(userhash)
+        if not @validHash userhash
           deferred.reject()
           return deferred.promise
 
-      if @exists(userhash)
+      if @exists userhash
         deferred.reject new Error('User Name and Password combination already exist')
       else
         fs.mkdirs @getPath(userhash), (err) ->

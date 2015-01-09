@@ -2,7 +2,7 @@ extends layout
 
 mixin search_item(torrent)
    .item.col-sm-6.col-md-4
-      a(href!=helpers.url.torrent_url(torrent.id))
+      a(href!=helpers.url.torrent(torrent.id))
          span.panel.panel-default
             span.panel-heading
                span.row

@@ -1,4 +1,4 @@
-module.exports = (torrent, helpers) ->
+module.exports = (helpers) ->
   parse_torrent = require 'parse-torrent'
   fs = require 'fs-extra'
   async  = require 'async'
@@ -7,7 +7,7 @@ module.exports = (torrent, helpers) ->
   class torrent
     @routes = (router) ->
       router.use require('multer') {
-        dest: app.get('sultanna_dir'),
+        dest: helpers.config.get 'sultanna_dir',
         limits:
           files: 2
           fileSize: helpers.config.get 'max file size'
@@ -75,7 +75,7 @@ module.exports = (torrent, helpers) ->
 
     torrent = (req, res, next, torrent_id) ->
       search.index.get torrent_id, (err, torrent) ->
-        if not torrent
+        if err or not torrent
           log.warn "[#{torrent_id}] does not exist in Search Index"
           return next()
 
@@ -87,9 +87,8 @@ module.exports = (torrent, helpers) ->
             fs.stat "#{torrent.localUri}.torrent", callback
         ], (err, files) ->
           if err or not files[1]? or not files[1].isFile() or files[1].size > max_size
-            search.index.del torrent.id, (err) ->
-              log.warn err or "[#{torrent_id}.torrent] is not a file, or too large. Deleted from Search Index"
-
+            search.index.del torrent_id, (err) ->
+              log.warn err or "[#{torrent_id}.torrent] is not a file, or too large. Deleted from Search Index."
               next()
           else
             if files[0]?.size < max_size
@@ -103,12 +102,12 @@ module.exports = (torrent, helpers) ->
           log.warn "[#{torrent_id}] does not exist in Search Index"
           next()
         else
-          torrent_store_path = "#{controllers.app.get('marianne_dir')}/#{req.session.userhash}/#{torrent.infoHash.toUpperCase()}"
+          torrent_store_path = helpers.torrent.getLocalPath req.session.userhash, torrent.category, torrent.subcategory, torrent_id
 
           fs.stat "#{torrent_store_path}.torrent", (err, file) ->
             if err or not file.isFile() or file.size > max_size
               helpers.search.index.del torrent.id, (err) ->
-                log.warn err or "[#{torrent_id}.torrent] is not a file, or too large. Deleted from Search Index"
+                log.warn err or "[#{torrent_id}.torrent] is not a file, or too large. Deleted from Search Index."
 
                 next()
             else
@@ -136,6 +135,8 @@ module.exports = (torrent, helpers) ->
         if err
           return res.render 'torrent/validation_failed', errors: {invalid: true}
 
+        parsed_torrent.title = title
+
         torrent_buffer = parse_torrent.toTorrentFile parsed_torrent
         metadata.magnet = parse_torrent.toMagnetURI parsed_torrent
 
@@ -147,5 +148,8 @@ module.exports = (torrent, helpers) ->
             fs.outputFile "#{torrent_store_path}.md", description
             metadata.description = description
 
-          helpers.search.indexTorrent metadata
-          res.render 'torrent/upload_successful'
+          helpers.search.indexTorrent metadata, (err) ->
+            if err
+              res.render 'torrent/validation_failed'
+            else
+              res.redirect helpers.url.torrent(torrent.id)

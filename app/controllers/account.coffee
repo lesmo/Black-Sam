@@ -1,11 +1,12 @@
-module.exports = (account, helpers) ->
+###
+  This Controller handles the Login and Creation of User Accounts, as well as the
+  upload and validation of User Certificates.
+###
+module.exports = (helpers) ->
   q = require 'q'
 
   class account
     @routes = (router) ->
-      router.use require('body-parser').urlencoded()
-      router.use require('csurf')
-
       router.use (err, req, res, next) ->
         res.locals.csrf_token = req.csrfToken
         next()

@@ -7,7 +7,7 @@
   Torrents to a category not in other Ships' configuration, those Ships will
   ignore it and never sync nor show them in search results.
 ###
-module.exports = (config) ->
+module.exports = (nil, config) ->
   # Category names must be lowercase, or they'll be ignored
   config.set 'categories', {
     anime: []

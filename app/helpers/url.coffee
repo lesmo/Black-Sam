@@ -1,6 +1,9 @@
-module.exports = (url) ->
-  base32 = require 'base36'
+module.exports = () ->
+  base32 = require 'base32'
 
+  ###
+    Facilitates calculation of URLs to different parts of BlackSam's controllers.
+  ###
   class url
     @torrent_mask = (hash) ->
       binary_hash = base32.decode hash
@@ -18,8 +21,17 @@ module.exports = (url) ->
 
       return base32.encode result.join('')
 
-    @torrent      = (id) -> "/torrent/#{@torrent_mask(id)}"
+    ### URL to a Torrent page ###
+    @torrent = (id) -> "/torrent/#{@torrent_mask(id)}"
+    ### URL to a Torrent Ajax page ###
     @torrent_ajax = (id) -> "/torrent/#{@torrent_mask(id)}?aj=ax"
+    ### URL to a Torrent file ###
     @torrent_file = (id) -> "/torrent/#{@torrent_mask(id)}.torrent"
 
-    @search = (query, page) -> "/search?q=#{query}&p=#{page}"
+    ### URL to a Search page ###
+    @search = (query, page) ->
+      "/search?q=#{query}" +
+        if page? > 1
+          "&p=#{page}"
+        else
+          ''

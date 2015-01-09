@@ -2,7 +2,7 @@
   This is where you setup essential BlackSam's behaviour, namely file storage
   paths and some web-facing settings.
 ###
-module.exports = (config) ->
+module.exports = (nil, config) ->
   # HTTP Port
   # This is the port BlackSam will use for incoming HTTP.
   # NOTE 1: This is overridden if running "node server.js -p <PORT>"

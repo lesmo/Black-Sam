@@ -1,25 +1,27 @@
-module.exports = (app) ->
-  express = require('express')
-  router  = express.Router()
+###
+  Initialize Controllers' Routing. Access to the Main {app} object isn't available,
+  because you really don't need it.
 
-  # Main Controller routing
-  app.controllers.main?.routes(router)
+  {controllers] is the Controllers object in {app.controllers}. The {Router} is a
+  direct pointer to {express.Router} function/constructor.
+###
+module.exports = (controllers, Router) ->
+  router = Router()
 
-  # Pre-processing for responses
-  app.use helpers.response.middleware
-  app.use helpers.user.middleware
+  # Main Controller routing directly in root
+  controllers.main?.routes router
 
   # Controllers routing
-  for controllerString, controller of app.controllers
+  for controllerString, controller of controllers
     continue if controllerString is 'main'
+    continue if typeof controller.routes isnt 'function'
 
-    controller_route = express.Router()
-    controller.routes(controller_route)
+    controller_router = Router()
+    controller.routes controller_route
 
-    router.use '/' + controllerString, controller_route
+    router.use '/' + controllerString, controller_router
 
   # Error handling (No previous route found. Assuming it’s a 404)
-  router.all '/*', (req, res) ->
-    res.render '404', status: 404, view: 'four-o-four'
+  router.all '/*', (req, res) -> res.status(404).render '404'
 
   return router
