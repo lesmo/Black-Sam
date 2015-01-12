@@ -5,6 +5,10 @@
   Only change them if you know what you're doing.
 ###
 module.exports = (cfg) ->
+  # This is the logging level of BlackSam. Available levels are
+  # 'info', 'warn' and 'error'. Comment this line to disable it.
+  cfg.set 'log level', 'info'
+
   # Un-comment this line if you want to disable Web Uploading.
   #cfg.disable 'web upload'
 
@@ -16,6 +20,11 @@ module.exports = (cfg) ->
   # Max number of errors a Worker is allowed before stopping
   # further attempts at reviving it.
   cfg.set 'max worker fails', 100
+
+  # Comment this line to kill BlackSam when the number above is
+  # reached by a Worker. It's recommended to disable this on
+  # a production server.
+  cfg.enable 'die on max worker fails'
 
   # Whether to rename or delete conflicting Torrents during
   # indexing. A conflicting Torrent is one which differs in
@@ -41,11 +50,11 @@ module.exports = (cfg) ->
   cfg.set 'torrent index worker batch', 10
 
   # Time threshold after which a Torrent is checked for seed and
-  # leech counts. This is the amount of time since last access
+  # leech counts. This is the amount of time since last update
   # that must pass before BlackSam finds new seed and leech counts.
   # This only happens when the Torrent is "accessed" after this
   # period of time to save resources on non-popular Torrents.
   #
   # The format can be whatever Sugar.js accepts as valid argument
-  # for the "advance" method http://sugarjs.com/api/Date/advance
+  # for the "advance" method: http://sugarjs.com/api/Date/advance
   cfg.set 'torrent update time threshold', hour: 2

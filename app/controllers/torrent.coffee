@@ -1,8 +1,7 @@
-module.exports = (helpers) ->
+module.exports = (helpers, log) ->
   parse_torrent = require 'parse-torrent'
-  fs = require 'fs-extra'
   async  = require 'async'
-  log = require 'winston'
+  fs = require 'fs-extra'
 
   class torrent
     @routes = (router) ->
@@ -62,7 +61,7 @@ module.exports = (helpers) ->
       router.get '/new/get-readme', (req, res) ->
         if req.query?.hash? and controllers.helpers.torrent.validHash req.query.hash
           if req.user.loggedIn
-            torrent_readme(req, res, req.query.hash)
+            torrent_readme req, res, req.query.hash
           else
             res.status(401).send {}
         else

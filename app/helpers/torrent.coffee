@@ -1,4 +1,4 @@
-module.exports = (cfg) ->
+module.exports = (cfg, log) ->
   string_decoder = new (require 'string_decoder').StringDecoder('utf8')
   parse_torrent = require 'parse-torrent'
   path = require 'path'
@@ -67,10 +67,11 @@ module.exports = (cfg) ->
         if timeout?
           clearTimeout timeout
         else
-          torrent?.remove()
-          return
+          log.warn "Metadata retrieval for Torrent [#{torrent.infoHash}] occurred after timeout (ignoring)"
+          return torrent?.remove()
 
         if not torrent?
+          log.info "No metadata found for Torrent [#{torrent.infoHash}]"
           return callback new Error('No metadata could be retrieved for torrent, apparently.', null)
 
         torrent.seeders  = 0
@@ -82,6 +83,7 @@ module.exports = (cfg) ->
           else
             torrent.leechers++
 
+        log.info "Metadata retrieved for Torrent [#{torrent.infoHash}]"
         callback null, torrent
 
     ###
@@ -97,7 +99,9 @@ module.exports = (cfg) ->
           return callback err
 
         for file in torrent.files when file.name.match /readme(\.(md|txt|nfo))?$/i
-          continue if file.length > cfg.get('max file size')
+          if file.length > cfg.get('max file size')
+            log.info "File [#{file.name}] is too big to be a valid README"
+            continue
 
           timeout = setTimeout ->
             timeout = undefined
@@ -108,11 +112,13 @@ module.exports = (cfg) ->
             if timeout?
               clearTimeout timeout
             else
-              return
+              return log.warn "README [#{file.name}] download from Torrent [#{torrent.infoHash}] occurred after timeout (ignoring)"
 
             if err
+              log.warn "README [#{file.name}] download from Torrent [#{torrent.infoHash}] failed", err
               callback err
             else
+              log.info "README [#{file.name}] download from Torrent [#{torrent.infoHash} successful"
               callback null, {
                 str: string_decoder.write(buffer) + string_decoder.end()
                 ext: file.name.match(/\.(md|txt|nfo)$/i)[0]
@@ -121,8 +127,9 @@ module.exports = (cfg) ->
             torrent.remove()
 
         # If this is reached, no README was found
+        log.warn "README file in Torrent [#{torrent.infoHash}] not found"
         torrent.remove()
-        return callback new Error('No file is elegible to be README')
+        return callback new Error('No file is eligible to be README')
 
     ###
       Find a Torrent's Metadata and return a Torrent Metadata Object, used for

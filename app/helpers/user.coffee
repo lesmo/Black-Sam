@@ -1,4 +1,4 @@
-module.exports = (cfg) ->
+module.exports = (cfg, log) ->
   crypto = require('cryptojs').Crypto
   fs = require 'fs-extra'
   q = require 'q'
@@ -32,10 +32,10 @@ module.exports = (cfg) ->
       Checks if a given {hash} could be a valid User Hash.
     ###
     @validHash = (hash) ->
-      regex_match = hash.match /^(1\-)?([0-9a-f]{40})$/i
+      regex_match = hash.match /^(1\-)?([0-9A-F]{40})$/i
 
       if regex_match?.length is 3
-        return regex_match[2].toUpperCase()
+        return "1-#{regex_match[2].toUpperCase()}"
       else
         return undefined
 
@@ -46,7 +46,7 @@ module.exports = (cfg) ->
       hash = @validHash hash
 
       if hash
-        return "#{cfg.get('marianne dir')}/#{@validHash hash}"
+        return "#{cfg.get 'marianne dir'}/#{@validHash hash}"
       else
         return undefined
 
@@ -82,8 +82,10 @@ module.exports = (cfg) ->
       else
         fs.mkdirs @getPath(userhash), (err) ->
           if err
+            log.error "Create User Folder [#{userhash}] failed", err
             deferred.reject err
           else
+            log.info "User Folder [#{userhash}] created"
             deferred.resolve(userhash)
 
       return deferred.promise

@@ -6,17 +6,34 @@
 module.exports = (app) ->
   ### Setup the autoloader ###
   fs = require 'fs'
+  path = require 'path'
 
-  autoload = (dir, obj, arg) ->
+  autoload = (dir, obj, logcat, args) ->
+    if arguments.length is 1
+      obj = {}
+    else if arguments.length is 3
+      args = logcat
+      logcat = undefined
+
     for file in fs.readdirSync dir
-      path = "#{dir}/#{file}"
-      stat = fs.lstatSync path
+      filepath = "#{dir}/#{file}"
+      stat = fs.lstatSync filepath
 
       if stat.isDirectory()
-        autoload path, obj, arg
-      else
-        cls = file.match(/(.*)(\..*)?/i)[1]
-        obj[cls] = require(path) arg
+        autoload filepath, obj, logcat, args
+      else if not obj[cls]?
+        cls  = file.match(/(.*)(\..*)?/i)[1]
+
+        if args?
+          if not args.isArray()
+            args = [args]
+        else
+          args = []
+
+        if logcat? and typeof logging is 'function'
+          args.push app.logging "#{logcat}.#{cls}"
+
+        obj[cls] = require(filepath).apply null, args
 
   ### Load Settings ###
   if not app.get('session secret') or app.get('session secret') is 'REPLACE THIS BEFORE STARTNG'
@@ -26,6 +43,13 @@ module.exports = (app) ->
     set: app.set
     enable: app.enable
     disable: app.disable
+  }
+
+  ### Setup logging ###
+  logging = require "#{__dirname}/logging", {
+    get: app.get
+    enabled: app.enabled
+    disabled: app.disabled
   }
 
   ### Setup the Express Framework ###
@@ -43,14 +67,23 @@ module.exports = (app) ->
   app.workers = {}
 
   # Helpers
-  autoload "#{__dirname}/helpers", app.helpers, {
-    get: app.get
-    enabled: app.enabled
-    disabled: app.disabled
-  }
+  autoload "#{__dirname}/helpers"
+    , app.helpers
+    , 'blacksam-helper'
+    , {
+      get: app.get
+      enabled: app.enabled
+      disabled: app.disabled
+    }
 
   # Controllers
-  autoload "#{__dirname}/controllers", app.controllers, app.helpers
+  autoload "#{__dirname}/controllers"
+    , app.controllers
+    , 'blacksam-controller'
+    , app.helpers
 
   # Workers
-  autoload "#{__dirname}/workers", app.workers, app.helpers
+  autoload "#{__dirname}/workers"
+    , app.workers
+    , 'blacksam-worker'
+    , app.helpers
