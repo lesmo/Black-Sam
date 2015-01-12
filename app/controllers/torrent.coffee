@@ -145,7 +145,7 @@ module.exports = (helpers, log) ->
 
           if description?.length > 8
             fs.outputFile "#{torrent_store_path}.md", description
-            metadata.description = description
+            metadata.description = description.parameterize().spacify()
 
           helpers.search.indexTorrent metadata, (err) ->
             if err
