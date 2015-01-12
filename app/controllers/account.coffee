@@ -37,7 +37,7 @@ module.exports = (helpers) ->
         req.session.destroy -> res.redirect '/'
 
     account_create = (req, res, userhash, username, password, password_repeat) ->
-      accountCreatePromise =
+      accountCreatePromise = () ->
         if userhash
           return helpers.user.create userhash
         else
@@ -58,7 +58,7 @@ module.exports = (helpers) ->
           else
             return helpers.user.create username, password
 
-      accountCreatePromise.then (userhash) ->
+      accountCreatePromise().then (userhash) ->
         req.session.userhash = userhash
         res.redirect '/'
       , ->

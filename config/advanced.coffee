@@ -9,13 +9,17 @@ module.exports = (cfg) ->
   # 'info', 'warn' and 'error'. Comment this line to disable it.
   cfg.set 'log level', 'info'
 
+  # This makes BlackSam output logs ONLY to the console. Useful
+  # during development.
+  cfg.disable 'log to file'
+
   # Un-comment this line if you want to disable Web Uploading.
   #cfg.disable 'web upload'
 
-  # Un-comment this line if you want to disable the Indexer Worker.
+  # Comment this line if you want to disable the Indexer Worker.
   # This is not recommended. Honestly, I don't know why I put it
   # there. Just don't touch it.
-  #cfg.disable 'run indexer worker'
+  cfg.enable 'run indexer worker'
 
   # Max number of errors a Worker is allowed before stopping
   # further attempts at reviving it.

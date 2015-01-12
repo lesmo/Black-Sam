@@ -12,22 +12,26 @@ app = express()
 
 # Load Controllers, Helpers and Workers
 require("#{__dirname}/init") app
+app.log.info "BlackSam controllers, helpers and settings loaded"
 
 # Load Middleware
-require("#{__dirname}/middleware") app.use, app.helpers.config
+require("#{__dirname}/middleware") ((a, b) -> if b? then app.use a, b else app.use a), app.helpers.config
+app.log.info "BlackSam Middleware attached"
 
-for h, helper of app.helpers when typeof helper.middleware is 'function'
+for h, helper of app.helpers when helper?.middleware?
   app.use helper.middleware
+  app.log.info "Helper Middleware {#{h}.middleware()} attached"
 
 # Load routing
 app.use '/', require("#{__dirname}/routes") app.controllers, express.Router
+app.log.info "BlackSam Controllers routing initialized"
 
 # Start the server
 require('http').createServer(app).listen app.get('port'), ->
-  console.log "BlackSam listening on port #{app.get 'port'} in #{app.settings.env} mode"
+  app.log.info "BlackSam listening on port #{app.get 'port'} in #{app.settings.env} mode"
 
 # Start Workers
-for w, worker of app.workers when not app.disabled "run #{w} worker"
+for w, worker of app.workers when app.enabled "run #{w} worker"
   if typeof worker is 'function'
     app.helpers.workers.startForever w, worker
   else if typeof worker.work is 'function'

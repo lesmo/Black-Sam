@@ -80,7 +80,7 @@ module.exports = (cfg, log) ->
       if @exists userhash
         deferred.reject new Error('User Name and Password combination already exist')
       else
-        fs.mkdirs @getPath(userhash), (err) ->
+        fs.mkdirp @getPath(userhash), (err) ->
           if err
             log.error "Create User Folder [#{userhash}] failed", err
             deferred.reject err

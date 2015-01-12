@@ -9,7 +9,7 @@ module.exports = (controllers, Router) ->
   router = Router()
 
   # Main Controller routing directly in root
-  controllers.main?.routes router
+  controllers.main?.routes? router
 
   # Controllers routing
   for controllerString, controller of controllers
@@ -17,7 +17,7 @@ module.exports = (controllers, Router) ->
     continue if typeof controller.routes isnt 'function'
 
     controller_router = Router()
-    controller.routes controller_route
+    controller.routes controller_router
 
     router.use '/' + controllerString, controller_router
 
