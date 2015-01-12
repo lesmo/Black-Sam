@@ -18,39 +18,48 @@ module.exports = (app) ->
     for file in fs.readdirSync dir
       filepath = "#{dir}/#{file}"
       stat = fs.lstatSync filepath
+      cls  = file.match(/([0-9a-z]+)(\.[0-9a-z]+)?/i)[1]
 
       if stat.isDirectory()
         autoload filepath, obj, logcat, args
       else if not obj[cls]?
-        cls  = file.match(/(.*)(\..*)?/i)[1]
-
         if args?
-          if not args.isArray()
+          if not Array.isArray args
             args = [args]
         else
           args = []
 
         if logcat? and typeof logging is 'function'
-          args.push app.logging "#{logcat}.#{cls}"
+          args.push logging "#{logcat}.#{cls}"
 
         obj[cls] = require(filepath).apply null, args
+        app.log?.info "Loaded {#{cls}} from #{filepath}"
+
+  readonly_config = {
+    get: (k) -> app.get k
+    enabled: (k) -> app.enabled k
+    disabled: (k) -> app.disabled k
+  }
 
   ### Load Settings ###
+  autoload "#{__dirname}/../config", {}, {
+    set: (k, v) -> app.set k, v
+    enable: (k) -> app.enable k
+    disable: (k) -> app.disable k
+  }
+
   if not app.get('session secret') or app.get('session secret') is 'REPLACE THIS BEFORE STARTNG'
     app.set 'session secret', (Math.random().toString() + '056127539128').slice(2, 20)
 
-  autoload "#{__dirname}/../config", {}, {
-    set: app.set
-    enable: app.enable
-    disable: app.disable
-  }
+  for path_config in ['marianne', 'sultanna', 'sherlock', 'logs']
+    app.set "#{path_config} path", path.resolve app.get "#{path_config} path"
 
   ### Setup logging ###
-  logging = require "#{__dirname}/logging", {
-    get: app.get
-    enabled: app.enabled
-    disabled: app.disabled
-  }
+  logging = require("#{__dirname}/logging") readonly_config
+  app.log = logging('blacksam-core')
+
+  if app.disabled 'log to file'
+    app.log.info "Logging to file is disabled, printing logs to console"
 
   ### Setup the Express Framework ###
   port = app.get('http port') || process.env.PORT || 3000
@@ -70,11 +79,8 @@ module.exports = (app) ->
   autoload "#{__dirname}/helpers"
     , app.helpers
     , 'blacksam-helper'
-    , {
-      get: app.get
-      enabled: app.enabled
-      disabled: app.disabled
-    }
+    , readonly_config
+  app.helpers.config = readonly_config
 
   # Controllers
   autoload "#{__dirname}/controllers"
