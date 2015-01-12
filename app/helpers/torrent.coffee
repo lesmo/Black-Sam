@@ -6,7 +6,7 @@ module.exports = (cfg, log) ->
   ###
     Facilitates processing Torrents and their metadata.
   ###
-  class torrent
+  class torrent_helper
     ### WebTorrent Client Instance ###
     @client = new (require 'webtorrent')()
 
@@ -41,7 +41,7 @@ module.exports = (cfg, log) ->
       else
         return undefined
 
-      return path.join cfg.get('marianne_dir'),
+      return path.join cfg.get('marianne path'),
         userhash.toUpperCase(),
         category.toUpperCase(),
         (subcategory or '').toUpperCase(),
@@ -63,28 +63,27 @@ module.exports = (cfg, log) ->
         callback new Error('Metadata retrieval timed-out'), null
       , 10000
 
-      torrent = @client.add torrent_id, (torrent) ->
-        if timeout?
-          clearTimeout timeout
-        else
+      @client.add torrent_id, {tmp: cfg.get 'sultanna path'}, (torrent) =>
+        if not timeout?
           log.warn "Metadata retrieval for Torrent [#{torrent.infoHash}] occurred after timeout (ignoring)"
-          return torrent?.remove()
+          return (@client.remove torrent.infoHash if torrent?.infoHash?)
 
         if not torrent?
+          clearTimeout timeout
           log.info "No metadata found for Torrent [#{torrent.infoHash}]"
-          return callback new Error('No metadata could be retrieved for torrent, apparently.', null)
+          return callback new Error('No metadata could be retrieved for torrent, apparently', null)
 
-        torrent.seeders  = 0
-        torrent.leechers = 0
-
-        for wire in torrent.swarm.wires
-          if wire.isSeeder
-            torrent.seeders++
+        torrent.discovery.tracker.once 'update', (data) ->
+          if timeout?
+            clearTimeout timeout
           else
-            torrent.leechers++
+            return (@client.remove torrent.infoHash if torrent?.infoHash?)
 
-        log.info "Metadata retrieved for Torrent [#{torrent.infoHash}]"
-        callback null, torrent
+          torrent.seeders  = data.complete
+          torrent.leechers = data.incomplete
+
+          log.info "Metadata retrieved for Torrent [#{torrent.infoHash}]"
+          callback null, torrent
 
     ###
       Find and Download a Torrent's README file. If available, it's contents
@@ -93,7 +92,7 @@ module.exports = (cfg, log) ->
       @param torrent_id (String|Object) A Parse-Torrent result, a Magnet URI or a Buffer of a *.torrent file
     ###
     @getReadme = (torrent_id, callback) ->
-      @get torrent_id, (err, torrent) ->
+      @get torrent_id, (err, torrent) =>
         if err or not torrent?
           torrent?.remove()
           return callback err
@@ -108,7 +107,7 @@ module.exports = (cfg, log) ->
             callback new Error('README download timed-out'), null
           , 20000
 
-          return file.getBuffer (err, buffer) ->
+          return file.getBuffer (err, buffer) =>
             if timeout?
               clearTimeout timeout
             else
@@ -118,17 +117,17 @@ module.exports = (cfg, log) ->
               log.warn "README [#{file.name}] download from Torrent [#{torrent.infoHash}] failed", err
               callback err
             else
-              log.info "README [#{file.name}] download from Torrent [#{torrent.infoHash} successful"
               callback null, {
                 str: string_decoder.write(buffer) + string_decoder.end()
                 ext: file.name.match(/\.(md|txt|nfo)$/i)[0]
               }
+              log.info "README [#{file.name}] download from Torrent [#{torrent.infoHash} successful"
 
-            torrent.remove()
+            @client.remove torrent.infoHash
 
         # If this is reached, no README was found
         log.warn "README file in Torrent [#{torrent.infoHash}] not found"
-        torrent.remove()
+        @client.remove torrent.infoHash if torrent?.infoHash?
         return callback new Error('No file is eligible to be README')
 
     ###
@@ -140,14 +139,14 @@ module.exports = (cfg, log) ->
       @param torrent_id (String|Object) A Parse-Torrent result, a Magnet URI or a Buffer of a *.torrent file
     ###
     @findMetadata = (torrent_id, callback) ->
-      @get torrent_id, (err, torrent) ->
+      @get torrent_id, (err, torrent) =>
         if err or not torrent?
-          torrent?.remove()
+          @client.remove torrent.infoHash if torrent?.infoHash?
           return callback err or new Error('Torrent metadata not retrieved')
 
         callback null, {
-          id: torrent.parsedTorrent.infoHash.toUpperCase()
-          magnet: parse_torrent.toMagnetURI(torrent.parsedTorrent)
+          id: torrent.infoHash.toUpperCase()
+          magnet: parse_torrent.toMagnetURI torrent.parsedTorrent
           uploader: undefined
 
           title: torrent.parsedTorrent.title
@@ -166,7 +165,7 @@ module.exports = (cfg, log) ->
             accessed: new Date().getTime()
         }, torrent.parsedTorrent
 
-        torrent.remove()
+        @client.remove torrent.infoHash
 
     ###
       Check if a given Torrent exists. Simply that.
@@ -174,6 +173,6 @@ module.exports = (cfg, log) ->
       @param torrent_id (String|Object) A Parse-Torrent result, a Magnet URI or a Buffer of a *.torrent file
     ###
     @exists = (torrent_id, callback) ->
-      @get torrent_id, (err, torrent) ->
-        torrent?.remove()
+      @get torrent_id, (err, torrent) =>
+        @client.remove torrent.infoHash if torrent?.infoHash?
         callback not err? and torrent?
