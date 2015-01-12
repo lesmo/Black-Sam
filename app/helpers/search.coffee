@@ -5,10 +5,9 @@ module.exports = (cfg, log) ->
   ###
   class search
     ### Search Index ###
-    @index = require('search-index') {
-      indexPath: app.get('sherlock_dir'),
+    @index = require('search-index')
+      indexPath: cfg.get 'sherlock path'
       logLevel: 'error'
-    }
 
     ###
       Add a Torrent Metadata object or array of objects to add to the Search Index.
@@ -17,16 +16,20 @@ module.exports = (cfg, log) ->
       @param callback (Function) Exact same callback as if it were {si.add}
     ###
     @indexTorrent = (torrent, callback) ->
-      torrent_count = if torrent.isArray() then torrent.length else 1
-      log.info "Adding #{torrent_count} Torrents to the Search Index ..."
+      torrent_count = if Array.isArray(torrent)
+        "#{torrent.length} Torrents"
+      else
+        "a Torrent"
+
+      log.info "Adding #{torrent_count} to the Search Index ..."
 
       @index.add {
         batchName: 'helperBatch'
         filters: ['title', 'description', 'files_ix', 'files']
-      }, if torrent.length > 0 then torrent else [torrent], (err) ->
+      }, (if Array.isArray(torrent) then torrent else [torrent]), (err) ->
         if err
           log.error "Error adding #{torrent_count} Torrents", err
         else
-          log.info "Added #{torrent_count} Torrents tot the Search Index"
+          log.info "Added #{torrent_count} to the Search Index"
 
         callback(err)
