@@ -8,17 +8,18 @@ module.exports = (cfg) ->
   return (component) ->
     if loggers[component]?
       return loggers[component]
-    else
+    else if cfg.get 'log level'
+      transports = [
+        new winston.transports.Console
+          level: cfg.get 'log level'
+      ]
+
+      if not cfg.disabled 'log to file'
+        transports.push new winston.transports.File
+          filename: "#{cfg.get 'logs path'}/#{component}.log",
+          level: cfg.get 'log level'
+
       return loggers[component] =
-        if cfg.get 'log level'
-          new winston.Logger transports: [
-            new winston.transports.Console {
-              level: cfg.get 'log level'
-            }
-            new winston.transports.File {
-              filename: "#{cfg.get 'logs path'}/#{component}.log",
-              level: cfg.get 'log level'
-            }
-          ]
-        else
-          fakeLogger
+        new winston.Logger transports: transports
+    else
+      return fakeLogger
