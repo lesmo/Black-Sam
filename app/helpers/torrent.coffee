@@ -153,8 +153,10 @@ module.exports = (cfg) ->
           files: (file.path for file in torrent.files)
 
           health:
-            seeders: torrent.seeders
+            seeders : torrent.seeders
             leechers: torrent.leechers
+            updated : new Date().getTime()
+            accessed: new Date().getTime()
         }, torrent.parsedTorrent
 
         torrent.remove()
