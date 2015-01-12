@@ -1,17 +1,13 @@
 ###
   Go through all directories in [marianne] and retrieve available Torrents, and
   make sure they're properly Indexed.
-
-  This Worker does not update seed/leech count.
 ###
 
 module.exports = (helpers) ->
   parse_torrent = require 'parse-torrent'
   async = require 'async'
   path = require 'path'
-  fs = require 'fs'
-
-  marianne = helpers.config.get 'marianne path'
+  fs = require 'fs-extra'
 
   find_file_meta = (filepath, userhash) -> (done) ->
     return done() if not userhash?
@@ -26,11 +22,22 @@ module.exports = (helpers) ->
     subcategory = '' if subcategory is userhash
 
     if helpers.torrent.validHash(info_hash) and info_hash is parsed_torrent.infoHash
-      helpers.search.index.get infohash, (err, _torrent_meta) ->
+      helpers.search.index.get info_hash, (err, _torrent_meta) ->
+        torrent_last_accessed = new Date _torrent_meta.health.accessed
+        torrent_last_updated  = new Date _torrent_meta.health.updated
+        time_threshold = helpers.config.get 'torrent update time threshold'
+
+        if torrent_last_accessed < torrent_last_updated.advance time_threshold
+          return done() # Don't update torrent until accessed later
+
         if not err? and _torrent_meta?
-          userhash    = _torrent_meta.uploader if _torrent_meta.uploader isnt userhash
-          category    = _torrent_meta.category if _torrent_meta.category isnt category
-          subcategory = _torrent_meta.subcategory if _torrent_meta.subcategory isnt subcategory
+          # Trust what's already in the index, and not new stuff
+          if _torrent_meta.uploader isnt userhash
+            userhash = _torrent_meta.uploader
+          if _torrent_meta.category isnt category
+            category = _torrent_meta.category
+          if _torrent_meta.subcategory isnt subcategory
+            subcategory = _torrent_meta.subcategory
 
         find_torrent_meta()
     else
@@ -40,9 +47,9 @@ module.exports = (helpers) ->
       if helpers.config.get('categories')[category]?
         if subcategory.length > 0
           if helpers.config.get('categories')[category].indexOf(subcategory) < 0
-            return done() # Subcategory is ignored (delete torrent?)
+            return ignore_torrent_file() # Subcategory is ignored (delete torrent?)
       else
-        return done() # Category is ignored (delete torrent?)
+        return ignore_torrent_file() # Category is ignored (delete torrent?)
 
       helpers.torrent.findMetadata parsed_torrent, (err, torrent_meta) ->
         if torrent_meta?
@@ -50,12 +57,25 @@ module.exports = (helpers) ->
           torrent_meta.category    = category
           torrent_meta.subcategory = subcategory
 
-          # TODO: Move/rename Torrent file to reflect accurate uploader, categories and infohash
+          torrent_path = helpers.torrent.getLocalPath torrent_meta
 
-          done null, torrent_meta
+          if torrent_path isnt filepath
+            fs.move filepath, torrent_path, clobber: true, ->
+              done null, torrent_meta
+          else
+            done null, torrent_meta
         else
-          # TODO: Delete torrent?
+          ignore_torrent_file()
+
+    ignore_torrent_file = () ->
+      if helpers.config.get 'torrent conflict solution' is 'delete'
+        fs.delete filepath, ->
           done()
+      else if helpers.config.get 'torrent conflict solution' is 'rename'
+        fs.move filepath, "#{filepath}.#{helpers.config.get 'torrent conflict extension'}", ->
+          done()
+      else
+        done()
 
   get_files = (dirpath, files) ->
     for item in fs.readdirSync dirpath
@@ -66,18 +86,25 @@ module.exports = (helpers) ->
       else if stat.isFile() and item.match /\.torrent$/
         files.push "#{dirpath}/#{item}"
 
-  return (next) ->
-    index_batch = []
+  return (finish) ->
+    worker = async.cargo (tasks, callback) ->
+      async[helpers.config.get 'torrent index worker method'] (err, torrents) ->
+        helpers.search.indexTorrent (t for t in torrents when t?), ->
+          callback()
 
-    for user_dir in fs.readdirSync marianne when fs.lstatSync("#{marianne}/#{user_dir}").isDirectory()
-      continue if not helpers.user.validHash user_dir
+    worker.payload = helpers.config.get 'torrent index worker batch'
 
-      files = []
-      get_files "#{marianne}/#{user_dir}", files
+    async.eachLimit fs.readdirSync(helpers.config.get 'marianne path')
+      , helpers.config.get('torrent index worker batch')
+      , (user_dir, next) ->
+        return next() if not fs.lstatSync("#{marianne}/#{user_dir}").isDirectory()
+        return next() if not helpers.user.validHash user_dir
 
-      for file in files
-        index_batch.push find_file_meta(file, user_dir)
+        files = []
+        get_files "#{marianne}/#{user_dir}", files
 
-    async.parallel index_batch, (err, torrents) ->
-      helpers.search.indexTorrent t for t in torrents when t?, ->
-        setTimeout next, app.get('indexer timespan')
+        for file in files
+          worker.push find_file_meta(file, user_dir)
+      , ->
+        worker.drain = ->
+          setTimeout finish, app.get('indexer timespan')

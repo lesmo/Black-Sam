@@ -39,3 +39,13 @@ module.exports = (cfg) ->
 
   # Items per processing batch
   cfg.set 'torrent index worker batch', 10
+
+  # Time threshold after which a Torrent is checked for seed and
+  # leech counts. This is the amount of time since last access
+  # that must pass before BlackSam finds new seed and leech counts.
+  # This only happens when the Torrent is "accessed" after this
+  # period of time to save resources on non-popular Torrents.
+  #
+  # The format can be whatever Sugar.js accepts as valid argument
+  # for the "advance" method http://sugarjs.com/api/Date/advance
+  cfg.set 'torrent update time threshold', hour: 2
