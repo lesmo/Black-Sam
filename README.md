@@ -40,7 +40,7 @@ For authentication of Torrent contributions when users choose to do so, a public
 
 Because **BlackSam** is trying to stick as much as possible to pure **Node.js**, [only a subset](http://kjur.github.io/jsrsasign/) of ```*.pem``` file formats and algorithms are supported.
 
-### user.sig
+#### user.sig
 The only way of authenticating a _Public Key_ ```user.pem``` file is actually one uploaded by the user, a ```user.sig``` file must be created with the signature of the ```user.<display name>.json``` file.
 
 #### user.lock
