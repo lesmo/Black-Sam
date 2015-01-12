@@ -27,5 +27,8 @@ require('http').createServer(app).listen app.get('port'), ->
   console.log "BlackSam listening on port #{app.get 'port'} in #{app.settings.env} mode"
 
 # Start Workers
-for w, worker of app.workers when typeof worker is 'function'
-  app.helpers.workers.startForever w, worker
+for w, worker of app.workers when not app.disabled "run #{w} worker"
+  if typeof worker is 'function'
+    app.helpers.workers.startForever w, worker
+  else if typeof worker.work is 'function'
+    app.helpers.workers.startForever w, worker.work
