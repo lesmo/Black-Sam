@@ -29,3 +29,8 @@ bower_components
 # Intelli-J Idea files
 .idea
 *.iml
+
+# BlackSam default directories
+marianne
+sultanna
+sherlock
