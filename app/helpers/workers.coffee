@@ -14,7 +14,7 @@ module.exports = (cfg, log) ->
         # Only re-run the Worker if it's still within reasonable threshold
         if worker_fails < app.get 'max worker fails'
           log.warn "Worker [#{name}] failed for the #{worker_fails.ordinalize()} time, restarting...", err
-          worker_spawner name, worker
+          @startForever name, worker, fail_callback
         else
           delete worker_fails[name]
 

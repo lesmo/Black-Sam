@@ -1,6 +1,8 @@
 ###
   Go through all directories in [marianne] and retrieve available Torrents, and
   make sure they're properly Indexed.
+
+  NOTE: I know this might not be the most-readable piece of code, but works.
 ###
 
 module.exports = (helpers, log) ->
@@ -17,11 +19,75 @@ module.exports = (helpers, log) ->
     info_hash = path.basename(filepath).match(/(.*)\..*/i)[1].toUpperCase()
     parsed_torrent = parse_torrent fs.readFileSync filepath
 
-    category = (path.basename path.dirname filepath).toLowerCase()
-    category = 'others' if category is userhash
+    category = path.basename path.dirname filepath
+    category = if category is userhash then 'others' else category.toLowerCase()
 
-    subcategory = (path.basename path.dirname path.dirname filepath).toLowerCase()
-    subcategory = '' if subcategory is userhash
+    subcategory = path.basename path.dirname path.dirname filepath
+    subcategory = if subcategory is userhash then '' else subcategory.toLowerCase()
+
+    ignore_torrent_file = ->
+      if helpers.config.get('torrent conflict solution') is 'delete'
+        fs.delete filepath, (err) ->
+          if err
+            log.error "Torrent [#{info_hash}] conflict solving failed", err
+          else
+            log.info "Torrent [#{info_hash}] conflict solved through deletion",
+              file: filepath
+          done()
+      else if helpers.config.get('torrent conflict solution') is 'rename'
+        fs.move filepath, "#{filepath}.#{helpers.config.get 'torrent conflict extension'}", (err) ->
+          if err
+            log.error "Torrent [#{info_hash}] conflict solving failed", err
+          else
+            log.error "Torrent [#{info_hash}] conflict solved by renaming",
+              renamed: "#{filepath}.#{helpers.config.get 'torrent conflict extension'}"
+          done()
+      else
+        log.error "Torrent [#{info_hash}] conflict WILL NOT be solved, configuration is invalid"
+        done()
+
+    get_torrent_description = ->
+      if fs.existsSync "#{helpers.torrent.getLocalPath find_torrent_meta}.md"
+        torrent_description = fs.readFileSync "#{helpers.torrent.getLocalPath find_torrent_meta}.md", 'utf8'
+        torrent_meta.description = torrent_description.parameterize().spacify()
+
+    find_torrent_meta = ->
+      if helpers.config.get('categories')[category]?
+        if subcategory.length > 0
+          if helpers.config.get('categories')[category].indexOf(subcategory) < 0
+            log.warn "Torrent [#{info_hash}] Category [#{category}.#{subcategory}] not in configuration, ignoring"
+            return ignore_torrent_file() # Subcategory is ignored
+      else
+        log.warn "Torrent [#{info_hash}] Category [#{category}] not in configuration, ignoring"
+        return ignore_torrent_file() # Category is ignored
+
+      helpers.torrent.findMetadata parsed_torrent, (err, torrent_meta) ->
+        if torrent_meta?
+          torrent_meta.uploader    = userhash
+          torrent_meta.category    = category
+          torrent_meta.subcategory = subcategory
+
+          torrent_path = helpers.torrent.getLocalPath torrent_meta
+
+          if torrent_path isnt filepath
+            log.warn "Torrent [#{info_hash}] has incorrect path, moving ...", {
+              original: filepath,
+              corrected: torrent_path
+            }
+
+            fs.move filepath, "#{torrent_path}.torrent", clobber: true, (err) ->
+              if err
+                log.error "Torrent [#{info_hash}] move failed", err
+                done()
+              else
+                log.info "Torrent [#{info_hash}] move successful"
+                get_torrent_description()
+                done null, torrent_meta
+          else
+            get_torrent_description()
+            done null, torrent_meta
+        else
+          ignore_torrent_file()
 
     if helpers.torrent.validHash(info_hash) and info_hash is parsed_torrent.infoHash
       helpers.search.index.get info_hash, (err, _torrent_meta) ->
@@ -49,66 +115,9 @@ module.exports = (helpers, log) ->
     else
       find_torrent_meta()
 
-    find_torrent_meta = () ->
-      if helpers.config.get('categories')[category]?
-        if subcategory.length > 0
-          if helpers.config.get('categories')[category].indexOf(subcategory) < 0
-            log.warn "Torrent [#{info_hash}] Category [#{category}.#{subcategory}] not in configuration, ignoring"
-            return ignore_torrent_file() # Subcategory is ignored
-      else
-        log.warn "Torrent [#{info_hash}] Category [#{category}] not in configuration, ignoring"
-        return ignore_torrent_file() # Category is ignored
-
-      helpers.torrent.findMetadata parsed_torrent, (err, torrent_meta) ->
-        if torrent_meta?
-          torrent_meta.uploader    = userhash
-          torrent_meta.category    = category
-          torrent_meta.subcategory = subcategory
-
-          torrent_path = helpers.torrent.getLocalPath torrent_meta
-
-          if torrent_path isnt filepath
-            log.warn "Torrent [#{info_hash}] has incorrect path, moving ...", {
-              original: filepath,
-              corrected: torrent_path
-            }
-
-            fs.move filepath, torrent_path, clobber: true, (err) ->
-              if err
-                log.error "Torrent [#{info_hash}] move failed", err
-                done()
-              else
-                log.info "Torrent [#{info_hash}] move successful"
-                done null, torrent_meta
-          else
-            done null, torrent_meta
-        else
-          ignore_torrent_file()
-
-    ignore_torrent_file = () ->
-      if helpers.config.get 'torrent conflict solution' is 'delete'
-        fs.delete filepath, (err) ->
-          if err
-            log.error "Torrent [#{info_hash}] conflict solving failed", err
-          else
-            log.info "Torrent [#{info_hash}] conflict solved through deletion",
-              file: filepath
-          done()
-      else if helpers.config.get 'torrent conflict solution' is 'rename'
-        fs.move filepath, "#{filepath}.#{helpers.config.get 'torrent conflict extension'}", (err) ->
-          if err
-            log.error "Torrent [#{info_hash}] conflict solving failed", err
-          else
-            log.error "Torrent [#{info_hash}] conflict solved by renaming",
-              renamed: "#{filepath}.#{helpers.config.get 'torrent conflict extension'}"
-          done()
-      else
-        log.error "Torrent [#{info_hash}] conflict WILL NOT be solved, configuration is invalid"
-        done()
-
   get_files = (dirpath, files) ->
     for item in fs.readdirSync dirpath
-      stat = fs.lstatSync(item)
+      stat = fs.lstatSync "#{dirpath}/#{item}"
 
       if stat.isDirectory()
         get_files "#{dirpath}/#{item}", files
@@ -116,12 +125,34 @@ module.exports = (helpers, log) ->
         files.push "#{dirpath}/#{item}"
 
   return (finish) ->
+    if not fs.existsSync helpers.config.get 'marianne path'
+      log.warn "Marianne Folder doesn't exist, creating...",
+        path: helpers.config.get 'marianne path'
+
+      fs.mkdirpSync helpers.config.get 'marianne path'
+      return setTimeout finish, helpers.config.get 'indexer timespan'
+
+    user_dirs = fs.readdirSync helpers.config.get 'marianne path'
+
+    if user_dirs.length < 1
+      log.info "Marianne Folder contains no folders"
+      return setTimeout finish, helpers.config.get 'indexer timespan'
+
+    stats =
+      users_processed: 0
+      users_skipped: 0
+      torrents_processed: 0
+      torrents_ignored: 0
+
     worker = async.cargo (tasks, callback) ->
-      async[helpers.config.get 'torrent index worker method'] (err, torrents) ->
+      async[helpers.config.get 'torrent index worker method'] tasks, (err, torrents) ->
         valid_torrents = (t for t in torrents when t?)
 
-        log.info "Indexing batch of #{valid_torrents.length} Torrents (#{torrents.length - valid_torrents.length} ignored) ...",
-          torrents: torrents
+        log.info "Indexing batch of #{valid_torrents.length} Torrents " +
+          "(#{torrents.length - valid_torrents.length} ignored) ..."
+
+        stats.torrents_processed += valid_torrents.length
+        stats.torrents_ignored += torrents.length - valid_torrents.length
 
         helpers.search.indexTorrent valid_torrents, (err) ->
           if err
@@ -131,21 +162,58 @@ module.exports = (helpers, log) ->
 
           callback()
 
-    worker.payload = helpers.config.get 'torrent index worker batch'
+    worker.payload = 0
 
-    async.eachLimit fs.readdirSync(helpers.config.get 'marianne path')
+    async.eachLimit user_dirs
       , helpers.config.get('torrent index worker batch')
       , (user_dir, next) ->
-        return next() if not fs.lstatSync("#{marianne}/#{user_dir}").isDirectory()
-        return next() if not helpers.user.validHash user_dir
+        valid_user_dir = helpers.user.validHash user_dir
 
-        files = []
-        get_files "#{marianne}/#{user_dir}", files
+        if fs.lstatSync("#{helpers.config.get 'marianne path'}/#{user_dir}").isDirectory() and valid_user_dir
+          stats.users_processed++
 
-        for file in files
-          worker.push find_file_meta(file, user_dir)
+          process_files = ->
+            files = []
+            get_files "#{helpers.config.get 'marianne path'}/#{user_dir}", files
+
+            if files.length > 0
+              log.info "Processing [#{user_dir}] (#{files.length} torrents found)..."
+              for file in files
+                # Dynamically increase payload size until configured batch size is reached
+                if worker.payload <= helpers.config.get 'torrent index worker batch'
+                  worker.payload++
+
+                worker.push find_file_meta file, user_dir
+
+              # Move to the next User until current one is indexed
+              worker.drain = next
+            else
+              next()
+
+          if "#{helpers.config.get 'marianne path'}/#{user_dir}" isnt "#{helpers.config.get 'marianne path'}/#{valid_user_dir}"
+            fs.move "#{helpers.config.get 'marianne path'}/#{user_dir}"
+              , "#{helpers.config.get 'marianne path'}/#{helpers.user.validHash user_dir}"
+              , clobber: true
+              , (err) ->
+                if err
+                  log.error "Unable to rename [#{user_dir}] to [#{valid_user_dir}], skipping"
+                  next()
+                else
+                  log.warn "User Folder [#{user_dir}] had invalid User Hash formatting, renamed to [#{valid_user_dir}]..."
+                  user_dir = valid_user_dir
+                  process_files()
+          else
+            process_files()
+        else
+          log.warn "Skipped [#{user_dir}]"
+          stats.users_skipped++
+          next()
       , ->
         log.info "Torrents indexing Work queueing finished"
+
         worker.drain = ->
-          log.info "Torrents indexing finished"
-          setTimeout finish, app.get('indexer timespan')
+          log.info "Torrents indexing finished", stats
+          setTimeout finish, helpers.config.get 'indexer timespan'
+
+        # If there's nothing, setup next call
+        worker.drain() if worker.length() is 0
