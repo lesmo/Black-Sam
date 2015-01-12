@@ -21,6 +21,7 @@
     "serve-favicon": "^2.2.0",
     "serve-static": "^1.7.1",
     "stylus": "*",
+    "sugar": "^1.4.1",
     "underscore": "^1.7.0",
     "webtorrent": "^0.21.0",
     "winston": "^0.8.3"
