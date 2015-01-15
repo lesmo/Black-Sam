@@ -28,7 +28,7 @@ module.exports = (cfg) ->
       'pc'
       'mac'
       'psx'
-      'xbox 360'
+      'xbox'
       'wii'
       'handheld'
       'ios'
