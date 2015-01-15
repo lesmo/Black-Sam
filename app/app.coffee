@@ -6,16 +6,22 @@
   So everything stays tidy and neat. As a Ship's Deck must be.
 ###
 
-# Crate the App (obviously)
-express = require 'express'
+# Initial includes
+express  = require 'express'
+blacksam =
+  init: require "#{__dirname}/init"
+  middleware: require "#{__dirname}/middleware"
+  routes: require "#{__dirname}/routes"
+
+# Create the App (obviously)
 app = express()
 
 # Load Controllers, Helpers and Workers
-require("#{__dirname}/init") app
+blacksam.init app
 app.log.info "BlackSam controllers, helpers and settings loaded"
 
 # Load Middleware
-require("#{__dirname}/middleware") ((a, b) -> if b? then app.use a, b else app.use a), app.helpers.config
+blacksam.middleware app
 app.log.info "BlackSam Middleware attached"
 
 for h, helper of app.helpers when helper?.middleware?
@@ -23,12 +29,14 @@ for h, helper of app.helpers when helper?.middleware?
   app.log.info "Helper Middleware {#{h}.middleware()} attached"
 
 # Load routing
-app.use '/', require("#{__dirname}/routes") app.controllers, express.Router
+blacksam.routes app, express
 app.log.info "BlackSam Controllers routing initialized"
 
 # Start the server
-require('http').createServer(app).listen app.get('port'), ->
+app.listen app.get('port'), ->
   app.log.info "BlackSam listening on port #{app.get 'port'} in #{app.settings.env} mode"
+
+app.log.info "BlackSam RAM for boot: %s", process.memoryUsage().rss.bytes()
 
 # Start Workers
 for w, worker of app.workers when app.enabled "run #{w} worker"

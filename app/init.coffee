@@ -5,8 +5,12 @@
 
 module.exports = (app) ->
   ### Setup the autoloader ###
-  fs = require 'fs'
-  path = require 'path'
+  fs      = require 'fs'
+  path    = require 'path'
+  logging = require "#{__dirname}/logging"
+
+  # Defined AFTER config is loaded
+  logger = null
 
   autoload = (dir, obj, logcat, args) ->
     if arguments.length is 1
@@ -30,7 +34,7 @@ module.exports = (app) ->
           args = []
 
         if logcat? and typeof logging is 'function'
-          args.push logging "#{logcat}.#{cls}"
+          args.push logger "#{logcat}.#{cls}"
 
         obj[cls] = require(filepath).apply null, args
         app.log?.info "Loaded {#{cls}} from #{filepath}"
@@ -48,15 +52,17 @@ module.exports = (app) ->
     disable: (k) -> app.disable k
   }
 
-  if not app.get('session secret') or app.get('session secret') is 'REPLACE THIS BEFORE STARTNG'
+  # Generate awesome random secret if retarded operator didn't set one
+  if not app.get('session secret')? or app.get('session secret') is 'REPLACE THIS BEFORE STARTNG'
     app.set 'session secret', (Math.random().toString() + '056127539128').slice(2, 20)
 
+  # Make all paths absolute
   for path_config in ['marianne', 'sultanna', 'sherlock', 'logs']
-    app.set "#{path_config} path", path.resolve app.get "#{path_config} path"
+    app.set "#{path_config} path", path.resolve(app.get "#{path_config} path")
 
   ### Setup logging ###
-  logging = require("#{__dirname}/logging") readonly_config
-  app.log = logging('blacksam-core')
+  logger  = logging readonly_config
+  app.log = logger('blacksam-core')
 
   if app.disabled 'log to file'
     app.log.info "Logging to file is disabled, printing logs to console"

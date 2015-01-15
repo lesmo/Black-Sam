@@ -25,6 +25,8 @@ module.exports = (helpers, log) ->
     subcategory = path.basename path.dirname path.dirname filepath
     subcategory = if subcategory is userhash then '' else subcategory.toLowerCase()
 
+    created = null
+
     ignore_torrent_file = ->
       if helpers.config.get('torrent conflict solution') is 'delete'
         fs.delete filepath, (err) ->
@@ -62,38 +64,48 @@ module.exports = (helpers, log) ->
         return ignore_torrent_file() # Category is ignored
 
       helpers.torrent.findMetadata parsed_torrent, (err, torrent_meta) ->
-        if torrent_meta?
-          torrent_meta.uploader    = userhash
-          torrent_meta.category    = category
-          torrent_meta.subcategory = subcategory
+        return ignore_torrent_file() if not torrent_meta?
 
-          torrent_path = helpers.torrent.getLocalPath torrent_meta
+        torrent_meta.uploader    = userhash
+        torrent_meta.category    = category
+        torrent_meta.subcategory = subcategory
 
-          if torrent_path isnt filepath
-            log.warn "Torrent [#{info_hash}] has incorrect path, moving ...", {
-              original: filepath,
-              corrected: torrent_path
-            }
+        torrent_meta.created = created if created?
 
-            fs.move filepath, "#{torrent_path}.torrent", clobber: true, (err) ->
-              if err
-                log.error "Torrent [#{info_hash}] move failed", err
-                done()
-              else
-                log.info "Torrent [#{info_hash}] move successful"
-                get_torrent_description()
-                done null, torrent_meta
-          else
-            get_torrent_description()
-            done null, torrent_meta
+        torrent_path = "#{helpers.torrent.getLocalPath torrent_meta}.torrent"
+
+        if torrent_path isnt filepath
+          log.warn "Torrent [#{info_hash}] has incorrect path, moving ...", {
+            original: filepath,
+            corrected: torrent_path
+          }
+
+          fs.move filepath, torrent_path, clobber: true, (err) ->
+            if err
+              log.error "Torrent [#{info_hash}] move failed", err
+              done()
+            else
+              log.info "Torrent [#{info_hash}] move successful"
+              get_torrent_description()
+              done null, torrent_meta
         else
-          ignore_torrent_file()
+          get_torrent_description()
+          done null, torrent_meta
 
-    if helpers.torrent.validHash(info_hash) and info_hash is parsed_torrent.infoHash
+    if helpers.torrent.validHash(info_hash) and info_hash is parsed_torrent.infoHash.toUpperCase()
       helpers.search.index.get info_hash, (err, _torrent_meta) ->
-        if not err? and _torrent_meta?
-          torrent_last_accessed = new Date _torrent_meta.health.accessed
-          torrent_last_updated  = new Date _torrent_meta.health.updated
+        if err or not _torrent_meta?
+          log.info "Torrent [#{info_hash}] not in Index"
+        else
+          _torrent_meta = JSON.parse _torrent_meta
+          delete _torrent_meta['*']
+
+          console.log _torrent_meta
+
+          torrent_last_accessed = new Date _torrent_meta.accessed
+          torrent_last_updated  = new Date _torrent_meta.updated
+          created = new Date _torrent_meta.created
+
           time_threshold = helpers.config.get 'torrent update time threshold'
 
           if torrent_last_accessed < torrent_last_updated.advance time_threshold
@@ -102,17 +114,20 @@ module.exports = (helpers, log) ->
 
           # Trust what's already in the index, and not new stuff
           if _torrent_meta.uploader isnt userhash
-            log.warn "Torrent [#{info_hash}] file found in different User Folder (will be moved to [#{_torrent_meta.uploader}]"
+            log.warn "Torrent [#{info_hash}] file found in different User Folder (will be moved to [#{_torrent_meta.uploader}])"
             userhash = _torrent_meta.uploader
           if _torrent_meta.category isnt category
-            log.warn "Torrent [#{info_hash}] file found in different Category (will be moved to [#{_torrent_meta.category}]"
+            log.warn "Torrent [#{info_hash}] file found in different Category (will be moved to [#{_torrent_meta.category}])"
             category = _torrent_meta.category
           if _torrent_meta.subcategory isnt subcategory
-            log.warn "Torrent [#{info_hash}] file found in different Subcategory (will be moved to [#{_torrent_meta.subcategory}]"
+            log.warn "Torrent [#{info_hash}] file found in different Subcategory (will be moved to [#{_torrent_meta.subcategory}])"
             subcategory = _torrent_meta.subcategory
+
+          log.info "Torrent [#{info_hash}] already in Index, updating ..."
 
         find_torrent_meta()
     else
+      log.info "Invalid infohash [#{info_hash}] expected [#{parsed_torrent.infoHash}]"
       find_torrent_meta()
 
   get_files = (dirpath, files) ->

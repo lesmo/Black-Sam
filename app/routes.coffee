@@ -5,23 +5,21 @@
   {controllers] is the Controllers object in {app.controllers}. The {Router} is a
   direct pointer to {express.Router} function/constructor.
 ###
-module.exports = (controllers, Router) ->
-  router = Router()
-
+module.exports = (app, express) ->
   # Main Controller routing directly in root
-  controllers.main?.routes? router
+  app.controllers.main.routes app
+  app.log.info "Initialized routes for {main} Controller"
 
   # Controllers routing
-  for controllerString, controller of controllers
+  for controllerString, controller of app.controllers
     continue if controllerString is 'main'
-    continue if typeof controller.routes isnt 'function'
+    continue if not controller.routes?
 
-    controller_router = Router()
+    controller_router = express.Router()
     controller.routes controller_router
 
-    router.use '/' + controllerString, controller_router
-
+    app.use "/#{controllerString}", controller_router
+    app.log.info "Initialized routes for {#{controllerString}} Controller"
+  
   # Error handling (No previous route found. Assuming it’s a 404)
-  router.all '/*', (req, res) -> res.status(404).render '404'
-
-  return router
+  app.all '/*', (req, res) -> res.status(404).render '404'
