@@ -19,7 +19,7 @@ module.exports = (cfg) ->
     ]
     applications: [
       'windows'
-      'max'
+      'mac'
       'unix'
       'ios'
       'android'
