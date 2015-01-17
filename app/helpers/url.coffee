@@ -6,20 +6,25 @@ module.exports = () ->
   ###
   class url
     @torrent_mask = (hash) ->
-      binary_hash = base32.decode hash
-      key = String.fromCharCode(Math.random().toString().slice(2, 5))
+      hash   = new Buffer hash, 'hex'
+      masked = new Buffer hash.length + 2
+      key    = Math.floor Math.random() * parseInt('ffff', 16)
 
-      result = String.fromCharCode(byte ^ key) for byte in binary_hash
+      masked.writeUInt16LE key, 0
 
-      return base32.encode key + result.join('')
+      for i in [0...hash.length] by 2
+        masked.writeUInt16LE hash.readUInt16LE(i) ^ masked.readUInt16LE(0), i + 2
 
-    @torrent_unmask = (hash) ->
-      binary_hash = base32.decode hash
-      key = hash[0]
+      return masked.toString 'hex'
 
-      result = String.fromCharCode(byte ^ key) for byte in binary_hash.slice 1
+    @torrent_unmask = (masked) ->
+      masked = new Buffer masked, 'hex'
+      hash   = new Buffer masked.length - 2
 
-      return base32.encode result.join('')
+      for i in [2...masked.length] by 2
+        hash.writeUInt16LE masked.readUInt16LE(i) ^ masked.readUInt16LE(0), i - 2
+
+      return hash.toString 'hex'
 
     ### URL to a Torrent page ###
     @torrent = (id) -> "/torrent/#{@torrent_mask(id)}"
@@ -27,6 +32,8 @@ module.exports = () ->
     @torrent_ajax = (id) -> "/torrent/#{@torrent_mask(id)}?aj=ax"
     ### URL to a Torrent file ###
     @torrent_file = (id) -> "/torrent/#{@torrent_mask(id)}.torrent"
+
+    @torrent_cat_icon = (category) -> ""
 
     ### URL to a Search page ###
     @search = (query, page) ->
