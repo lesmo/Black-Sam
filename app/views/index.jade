@@ -1,6 +1,8 @@
 extends layouts/bare
 block head
   != css('css/index')
+block footer_js
+  != js('js/index')
 block body
     .site-wrapper
       .site-wrapper-inner
@@ -11,26 +13,33 @@ block body
                 ul.nav.masthead-nav
                   li
                     a(href='#') Browse
-                  li
-                    a(href='#') Login
+                  if user.loggedIn
+                    li
+                      a(href='/upload') Upload
+                    //li
+                      a(href='#') Account
+                    li
+                      a(href='/account/logout') Logout
+                  else
+                    li
+                      a(href='/account/login') Login
+                    li
+                      a(href='/account/new') Register
           .inner.cover
-            form
+            form(method='get', action='/search')
               .form-group
                 label(for='search-box').sr-only Search
-                input(type='text', placeholder='Search the seven seas').form-control.input-lg#search-box
+                input(type='text', name='q', placeholder='Search the seven seas').form-control.input-lg#search-box
 
               .btn-group
                 button(type='submit').btn.btn-lg.btn-primary Search
-                button(type='button', data-toggle='dropdown', aria-expanded='false').btn.btn-lg.btn-primary.dropdown-toggle
+                button(type='button', data-toggle='dropdown', aria-expanded='false').btn.btn-lg.btn-primary.dropdown-toggle#search-category-select
                   span.caret
                   span.sr-only Toggle search category
-                ul.dropdown-menu
-                  li
-                    a(href='#') Games
-                  li
-                    a(href='#') Games
-                  li
-                    a(href='#') Games
+                ul.dropdown-menu#search-categories
+                  each subcategories, category in helpers.config.get('categories')
+                    li
+                      a(data-category=category)= category.titleize()
           .mastfoot
             .inner
               p Powered by&nbsp;
