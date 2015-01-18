@@ -29,7 +29,7 @@ Because of the way **BlackSam** keeps all _Ships_ (or _nodes_ for non-pirate lad
 Other files provide more data for **BlackSam**'s behaviour, but because of the "create only" nature of it's sync methods, once they're created they cannot be deleted. Some mechanisms allow **BlackSam** to validate all ```user.*``` files, so adversaries cannot create a _Denial of Service_ on any user.
 
 #### user.json
-If a user chooses to be displayed as the uploader of her torrents, **BlackSam** can create a _JSON_ file named ```user.<display name>.json``` with _metadata_ about her. Different information can be inside, but for now only ```seedhash``` with the SHA-256 hash of the username and password combined as value is used.
+If a user chooses to be displayed as the uploader of her torrents, **BlackSam** can create a _JSON_ file named ```user.<display name>.json``` with _metadata_ about her. Different information can be inside, but for now only ```seedhash``` with the SHA-256 hash of the SHA-512 of the username and password combined as value is used.
 
 When a user requests a new username and password combination, and the user decides she'd like to keep her _Display Name_, the previous account is locked and the metadata file is re-created in the new _User Hash_ directory, preventing anyone from registering the old _Display Name_ while this process occurs. **BlackSam** _Ships_ will recognize this behaviour and delete local ```user.<display name>.json``` files.
 
