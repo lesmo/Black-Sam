@@ -35,6 +35,12 @@ block content
                            h3 Category
                               small &nbsp;(required)
                            p Pick the best category this Torrent fits into. Use <strong>Others</strong> when no other category seems to be adequate.
+
+                           each category, subcategories in helpers.config.get('categories')
+                              optgroup(label=category.titleize())
+                                 each subcategory in subcategories
+                                    option(value=category + '#' + subcategory)= subcategory.titleize()
+                                 option(value=category) 'Others'
                .col-md-8
                   .form-group
                      h3 Title

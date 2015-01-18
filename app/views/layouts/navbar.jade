@@ -27,13 +27,15 @@ block body
                 if user.loggedIn
                   li
                     a(href='/upload') Upload
-                  li
+                  //li
                     a(href='#') Account
                   li
                     a(href='/account/logout') Logout
                 else
                   li
-                    a(href='#') Login
+                    a(href='/account/login') Login
+                  li
+                    a(href='/account/new') Register
                 li
                   a(href='#')
                     span.glyphicon.glyphicon-question-sign
