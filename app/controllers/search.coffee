@@ -3,17 +3,17 @@ module.exports = (helpers) ->
     @routes = (router) ->
       router.get '/autocomplete', (req, res) ->
         autocomplete req, res,
-          if req.query?.q?.trim().length > 3
+          if req.query?.q?.trim().length > 2
             req.query.q.toLowerCase()
-          else if req.body?.q?.trim().length > 3
+          else if req.body?.q?.trim().length > 2
             req.body.q.toLowerCase()
           else
             null
       router.all '/', (req, res) ->
         query =
-          if req.query?.q?.trim().length > 4
+          if req.query?.q?.trim().length > 2
             req.query.q.toLowerCase().trim()
-          else if req.body?.q?.trim().length > 4
+          else if req.body?.q?.trim().length > 2
             req.body.q.toLowerCase().trim()
           else
             null
@@ -23,12 +23,12 @@ module.exports = (helpers) ->
           else if req.body?.p?
             parseInt req.body.p
           else
-            0
+            1
 
         if query?
-          doSearch req, res, query, (page or 1)
+          doSearch req, res, query, page
         else
-          res.redirect('/')
+          res.redirect '/'
 
     autocomplete = (req, res, query) ->
       if query?
@@ -43,28 +43,33 @@ module.exports = (helpers) ->
     doSearch = (req, res, query_str, page = 1) ->
       page = 1 if page < 1
 
-      cat_regex   = /cat:(.*)$/i
-      index_query = query: {'*': query_str}
-
-      cat_regex_matches = index_query.query['*'].match cat_regex
-
-      if cat_regex_matches?.length > 0
-        index_query.query['*'] = query_str.replace cat_regex, ''
-        index_query.filter =
-          category: cat_regex_matches[1]
-
-      helpers.search.index.search {
-        query: index_query
+      cat_regex   = /cat:([a-z]+)(\.([a-z]+))?/i
+      index_query =
+        query: {'*': query_str}
         pageSize: 20
         offset: (page - 1) * 20
-      }, (err, res) ->
-        if not err and res
-          res.render 'search', {
+
+      cat_regex_matches = query_str.match cat_regex
+
+      if cat_regex_matches?
+        index_query.query['*'] = query_str.replace cat_regex, ''
+        index_query.filter =
+          category: [cat_regex_matches[1]]
+
+        if cat_regex_matches[3]?
+          index_query.filter.subcategory = [cat_regex_matches[3]]
+
+      index_query.query['*'] = index_query.query['*'].split(' ')
+
+      helpers.search.index.search index_query, (err, results) ->
+        results = (hit.document for hit in results.hits)
+
+        if results?
+          res.render 'search',
             query: query_str,
-            results: (hit.document for hit of res?.hits)
+            results: results
             paging:
               current: page
-              total  : Math.ceil res?.totalHits / 20
-          }
+              total  : Math.ceil results?.totalHits / 20
         else
           res.status(500).render '500', error: err
