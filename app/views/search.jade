@@ -7,52 +7,58 @@ mixin search_item(torrent)
             span.panel-heading
                span.row
                   span.title.col-xs-12
-                     img(src=helpers.url.torrent_cat_icon(torrent.cat))
+                     img(src=helpers.url.torrent_cat_icon(torrent.category))
                      strong= torrent.title
             span.panel-body
                span.row
                   span.uploader.col-xs-4
-                     small= 'by ' + torrent.uploader
+                     small= 'by ' + helpers.user.getDisplayName(torrent.uploader)
                   span.counts.col-xs-8
                      small
-                        span.badge= torrent.seeds
+                        span.badge= torrent.seeders
                         | &nbsp;
                         | seeds
                      | &nbsp;
                      small
-                        span.badge= torrent.leechs
+                        span.badge= torrent.leechers
                         | &nbsp;
                         | leechs
 
 block head
    != css('css/search')
 block content
-   .row
-      each torrent in results
-         +search_item(torrent)
-   .row
-      .col-xs-12
-         nav.text-center
-            ul.pagination
-               if paging.current > paging.total
-                  li
-                     a(href=helpers.url.search(query, paging.current - 1), aria-label='Previous')
-                        span(aria-hidden='true') &laquo;
+   if results.length > 0
+      .row
+         each torrent in results
+            +search_item(torrent)
 
-               - var p = paging.current - 4
-               if p < 0
-                  - p = 0
+      .row
+         .col-xs-12
+            nav.text-center
+               ul.pagination
+                  if paging.current > paging.total
+                     li
+                        a(href=helpers.url.search(query, paging.current - 1), aria-label='Previous')
+                           span(aria-hidden='true') &laquo;
 
-               while p < paging.total || paging.current + 4
-                  li
-                     if p == paging.current
-                        a(href='#')= p
-                     else
-                        a(href=helpers.url.search(query, p))= p
-                  - p++
+                  - var p = paging.current - 4
+                  if p < 0
+                     - p = 0
 
-               if paging.current < paging.total
-                  li
-                     a(href=helpers.url.search(query, paging.current + 1), aria-label='Next')
-                        span(aria-hidden='true') &raquo;
-                        span(aria-hidden='true') &raquo;
+                  while p < paging.total && p < paging.current + 4
+                     li
+                        if p == paging.current
+                           a(href='#')= p
+                        else
+                           a(href=helpers.url.search(query, p))= p
+                     - p++
+
+                  if paging.current < paging.total
+                     li
+                        a(href=helpers.url.search(query, paging.current + 1), aria-label='Next')
+                           span(aria-hidden='true') &raquo;
+                           span(aria-hidden='true') &raquo;
+   else
+      .row
+         .col-xs-12
+            h2 No results found

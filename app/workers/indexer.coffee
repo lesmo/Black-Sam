@@ -100,8 +100,6 @@ module.exports = (helpers, log) ->
           _torrent_meta = JSON.parse _torrent_meta
           delete _torrent_meta['*']
 
-          console.log _torrent_meta
-
           torrent_last_accessed = new Date _torrent_meta.accessed
           torrent_last_updated  = new Date _torrent_meta.updated
           created = new Date _torrent_meta.created

@@ -15,18 +15,19 @@ module.exports = (cfg, log) ->
       @param torrent (Object|Array<Object>) Torrent Metadata.
       @param callback (Function) Exact same callback as if it were {si.add}
     ###
-    @indexTorrent = (torrent, callback) ->
-      torrent_count = if Array.isArray(torrent)
-        "#{torrent.length} Torrents"
+    @indexTorrent = (torrents, callback) ->
+      if Array.isArray(torrents)
+        torrent_count = "#{torrents.length} Torrents"
       else
-        "a Torrent"
+        torrents = [torrents]
+        torrent_count = "a Torrent"
 
       log.info "Adding #{torrent_count} to the Search Index ..."
 
       @index.add {
         batchName: 'helperBatch'
-        filters: ['title', 'description', 'files_ix', 'files']
-      }, (if Array.isArray(torrent) then torrent else [torrent]), (err) ->
+        filters: ['category', 'subcategory', 'uploader']
+      }, torrents, (err) ->
         if err
           log.error "Error adding #{torrent_count} Torrents", err
         else
