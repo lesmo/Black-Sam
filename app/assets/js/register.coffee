@@ -29,15 +29,13 @@ $ ->
       input.pass2.parent().addClass('has-error')
       error.pass2.slideDown()
 
-    if $(this).children('.has-error').length > 0
+    if $(this).find('.has-error').length > 0
       return e.preventDefault()
 
     hash = input.user.val() + input.pass.val()
-    hash = CryptoJS.SHA512(hash).toString()
-    hash = CryptoJS.SHA256(hash).toString()
-    hash = CryptoJS.RIPEMD160(hash).toString()
+    hash = CryptoJS.SHA512(hash).toString().toUpperCase()
+    hash = CryptoJS.SHA256(hash).toString().toUpperCase()
+    hash = CryptoJS.RIPEMD160(hash).toString().toUpperCase()
 
-    input.user.val ''
-    input.pass.val ''
-    input.pass2.val ''
+    inp.val '' for i, inp of input
     input.hash.val hash

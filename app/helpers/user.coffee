@@ -1,41 +1,37 @@
 module.exports = (cfg, log) ->
-  crypto = require('cryptojs').Crypto
+  user_crypto = require('./crypto')(cfg, log).user # this is a hack
   fs = require 'fs-extra'
-  q = require 'q'
+  q = 'q'
 
   ###
     Facilitates the interaction with User Accounts, their folders, hashing and validations.
   ###
   class user
     ###
+      An alias for {helpers.crypto.user.getHash}
+    ###
+    @getHash = user_crypto.getHash
+
+    ###
       The Middleware associates the User object to the {req} object, and
       the templating engine {user}.
     ###
-    @middleware = (err, req, res, next) ->
+    @middleware = (req, res, next) =>
       res.locals.user = req.user =
         loggedIn: @exists(req.session.userhash)
 
       next()
 
     ###
-      Calculate a User Hash for a given {username} and {password}.
-    ###
-    @getHash = (username, password) ->
-      hash = username + password
-      hash = crypto.SHA512(hash).toString()
-      hash = crypto.SHA256(hash).toString()
-      hash = crypto.RIPEMD160(hash).toString()
-
-      return hash
-
-    ###
       Checks if a given {hash} could be a valid User Hash.
     ###
     @validHash = (hash) ->
+      return undefined if not hash?
+
       regex_match = hash.match /^(1\-)?([0-9A-F]{40})$/i
 
       if regex_match?.length is 3
-        return "1-#{regex_match[2].toUpperCase()}"
+        return "1-#{regex_match[2]}"
       else
         return undefined
 
@@ -45,8 +41,8 @@ module.exports = (cfg, log) ->
     @getPath = @getLocalPath = (hash) ->
       hash = @validHash hash
 
-      if hash
-        return "#{cfg.get 'marianne dir'}/#{@validHash hash}"
+      if hash?
+        return "#{cfg.get 'marianne path'}/#{@validHash hash}"
       else
         return undefined
 
@@ -56,7 +52,7 @@ module.exports = (cfg, log) ->
     @exists = (hash) ->
       path = @getPath hash
 
-      if path
+      if path?
         return fs.existsSync path
       else
         return false
@@ -65,27 +61,55 @@ module.exports = (cfg, log) ->
       Creates a new User Account with the given User Hash or User Name and
       Password combination.
     ###
-    @create = (username, password) ->
-      deferred = q.defer()
-
-      if password
-        userhash = @getHash(username, password)
+    @create = (username, password, callback) ->
+      if callback
+        userhash = user_crypto.getHash username, password
+      else if userhash = @validHash username
+        callback = password
       else
-        userhash = username.toUpperCase()
-
-        if not @validHash userhash
-          deferred.reject()
-          return deferred.promise
+        return callback new Error('Invalid User Hash')
 
       if @exists userhash
-        deferred.reject new Error('User Name and Password combination already exist')
+        return callback new Error('User Hash already exist')
       else
         fs.mkdirp @getPath(userhash), (err) ->
           if err
             log.error "Create User Folder [#{userhash}] failed", err
-            deferred.reject err
+            return callback err
           else
             log.info "User Folder [#{userhash}] created"
-            deferred.resolve(userhash)
+            return callback null, userhash
 
-      return deferred.promise
+    @getDisplayName = (userhash) ->
+      userpath = @getLocalPath userhash
+
+      return 'invalid' if not userpath?
+
+      for file in fs.readdirSync userpath
+        diplay_name = file.match(/^user\.(.+)\.json$/i)?[1]
+        return display_name if display_name?
+
+      # If we got to here, no user json file was found
+      return 'anonymous'
+
+    @getMetadata = (userhash) ->
+      userpath = @getLocalPath userhash
+
+      if not userpath?
+        return undefined
+
+      userhash  = @validHash(userhash).from(2)
+      anonymous =
+        displayName: 'anonymous'
+
+      for file in fs.readdirSync userpath when display_name = file.match /^user\.(.+)\.json$/i
+        userjson = fs.readJSONSync "#{userpath}/#{file}"
+
+        if userjson?
+          userjson.displayName = display_name[1]
+
+          delete userjson.seedhash
+          return userjson
+
+      # If we got to here, no user json file was found
+      return anonymous

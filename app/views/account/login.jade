@@ -2,6 +2,9 @@ extends ../layout
 
 block head
    != css('css/login-register')
+block footer_js
+   != js('cryptojslib/components/core-min.js')
+   != js('cryptojslib/components/x64-core-min.js')
    != js('cryptojslib/components/ripemd160-min.js')
    != js('cryptojslib/components/sha256-min.js')
    != js('cryptojslib/components/sha512-min.js')
@@ -11,11 +14,19 @@ block content
       input(type='hidden', name='_csrf', value= csrf_token())
       input#hiddenUserhash(type='hidden', name='userhash')
 
-      if errors.failed
-         .alert.alert-danger User Name and Password combination are invalid. Try again, or <a href="/account/new">create an account</a>.
-
       h2 Login
-      include shared/panel-noscript
+
+      each error in errors.fatal
+         .alert.alert-danger
+            if error.type === 'blacksam.login.invalid'
+               p
+                  | User Name and Password combination were not found.
+                  | Try again, or <a href="/account/new">create an account</a>
+                  | if you don't already have one.
+            else
+               p= error.message
+
+      include ../shared/panel-noscript
 
       .form-group
          label.sr-only(for='textboxUsername') User name

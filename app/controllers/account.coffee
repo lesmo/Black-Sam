@@ -1,18 +1,21 @@
-###
-  This Controller handles the Login and Creation of User Accounts, as well as the
-  upload and validation of User Certificates.
-###
 module.exports = (helpers) ->
-  q = require 'q'
-
+  ###
+    This Controller handles the Login and Creation of User Accounts, as well as the
+    upload and validation of User Certificates.
+  ###
   class account
+    ###
+      Prepare the Routes that target this Controller.
+
+      @oaram router (Object) express.Router() object
+    ###
     @routes = (router) ->
-      router.use (err, req, res, next) ->
+      router.use (req, res, next) ->
         res.locals.csrf_token = req.csrfToken
         next()
 
       router.get '/new' , (req, res) -> res.render 'account/register'
-      router.get 'login', (req, res) -> res.render 'account/login'
+      router.get '/login', (req, res) -> res.render 'account/login'
 
       router.post '/new', (req, res) ->
         if req.body? and not req.user.loggedIn
@@ -21,6 +24,8 @@ module.exports = (helpers) ->
             req.body.username,
             req.body.password,
             req.body.password_repeat
+        else if req.user.loggedIn
+          res.redirect '/'
         else
           res.render 'account/register'
 
@@ -30,48 +35,66 @@ module.exports = (helpers) ->
             req.body.userhash,
             req.body.username,
             req.body.password
+        else if req.user.loggedIn
+          res.redirect '/'
         else
           res.render 'account/login'
 
       router.all '/logout', (req, res) ->
         req.session.destroy -> res.redirect '/'
 
+    ###
+      Process the creation of an Account.
+    ###
     account_create = (req, res, userhash, username, password, password_repeat) ->
-      accountCreatePromise = () ->
-        if userhash
-          return helpers.user.create userhash
-        else
-          e = new Error()
-
-          if username?.length < 7
-            e.userTooShort = true
-
-          if password?.length < 7
-            e.passTooShort = true
-          else if password_repeat isnt password
-            e.passMismatch = true
-
-          if e.userTooShort? or e.passTooShort? or e.passMismatch?
-            deferred = q.defer()
-            deferred.reject(e)
-            return deferred.promise
+      account_created = (err, userhash) ->
+        if err?
+          if Object.isArray err
+            res.errors.addValidation err
           else
-            return helpers.user.create username, password
+            res.errors.addFatal 'blacksam.register.exists'
 
-      accountCreatePromise().then (userhash) ->
-        req.session.userhash = userhash
-        res.redirect '/'
-      , ->
-        res.render 'account/register', errors: {userTaken: true}
+          res.render 'account/register'
+        else
+          account_login req, res, userhash
+      
+      if helpers.user.validHash userhash
+        helpers.user.create userhash, account_created
+      else
+        if username?.length < 7
+          res.errors.addValidation 'username'
 
+        if password?.length < 7
+          res.errors.addValidation 'password'
+        else if password_repeat isnt password
+          res.errors.addValidation 'password_repeat'
+
+        if res.errors.validation.length > 0
+          account_created e
+        else
+          helpers.user.create username, password, account_created
+
+    ###
+      Process an Account login.
+    ###
     account_login = (req, res, userhash, username, password) ->
-      if not userhash?
+      if userhash?.length is 0
         userhash = helpers.user.getHash username, password
       else if not helpers.user.validHash userhash
+        res.errors.addFatal 'blacksam.login.invalid'
         return res.render 'account/login'
+
+      # NOTE: This Login process is "insecure" since capturing the User Hash
+      #       in-transit could allow easy impersonation of users. The initial
+      #       version of BlackSam won't address this, as Tor or SSL are expected
+      #       to be used for communicating with it, and "sensitive" uploads are
+      #       expected to be signed. Maybe a Version 2 of User Hash is required
+      #       to enhance the security of this. An issue should be opened to
+      #       keep track of this.
 
       if helpers.user.exists userhash
         req.session.userhash = userhash
         res.redirect '/'
       else
-        res.render 'account/login', errors: {failed: true}
+        res.errors.addFatal 'blacksam.login.invalid'
+        res.render 'account/login'
