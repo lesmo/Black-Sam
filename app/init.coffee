@@ -27,6 +27,9 @@ module.exports = (app) ->
       if stat.isDirectory()
         autoload filepath, obj, logcat, args
       else if not obj[cls]?
+        req = require filepath
+        continue if typeof req isnt 'function'
+
         if args?
           if not Array.isArray args
             args = [args]
@@ -36,7 +39,7 @@ module.exports = (app) ->
         if logcat? and typeof logging is 'function'
           args.push logger "#{logcat}.#{cls}"
 
-        obj[cls] = require(filepath).apply null, args
+        obj[cls] = req.apply null, args
         app.log?.info "Loaded {#{cls}} from #{filepath}"
 
   readonly_config = {
