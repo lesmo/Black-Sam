@@ -33,7 +33,7 @@ module.exports = (cfg) ->
   # Whether to rename or delete conflicting Torrents during
   # indexing. A conflicting Torrent is one which differs in
   # uploader or categories from the filesystem and the Index.
-  cfg.set 'torrent conflict solution', 'delete'
+  cfg.set 'torrent conflict solution', 'rename'
 
   # Extension used when above is 'rename'.
   cfg.set 'torrent conflict extension', 'bak'
@@ -61,4 +61,4 @@ module.exports = (cfg) ->
   #
   # The format can be whatever Sugar.js accepts as valid argument
   # for the "advance" method: http://sugarjs.com/api/Date/advance
-  cfg.set 'torrent update time threshold', hour: 2
+  cfg.set 'torrent update time threshold', hour: 1
