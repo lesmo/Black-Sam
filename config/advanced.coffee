@@ -51,7 +51,11 @@ module.exports = (cfg) ->
   cfg.set 'torrent index worker method', 'series'
 
   # Items per processing batch
-  cfg.set 'torrent index worker batch', 10
+  cfg.set 'torrent index worker batch', 20
+
+  # Timeout for operations on Torrents, like retrieving metadata
+  # or README files. Affects part of the Web behaviour.
+  cfg.set 'torrent process timeout', 1000 * 30
 
   # Time threshold after which a Torrent is checked for seed and
   # leech counts. This is the amount of time since last update
