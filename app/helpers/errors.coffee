@@ -6,8 +6,13 @@ module.exports = (cfg, log) ->
       @validation = []
 
     types: {
-      'blacksam.login.invalid': 'Userhash is invalid or does not exist'
-      'blacksam.register.exists': 'Userhash already exists'
+      'blacksam.login.invalid': 'Userhash is invalid or does not exist.'
+      'blacksam.register.exists': 'Userhash already exists.'
+      'blacksam.upload.empty': 'No Magnet Link or Torrent file uploaded.'
+      'blacksam.upload.invalid': 'Invalid Magnet Link or Torrent file uploaded.'
+      'blacksam.upload.exists': 'Torrent is already stored.'
+      'blacksam.upload.failed': 'Torrent upload failed.'
+      'blacksam.upload.index_failed': 'Torrent upload indexing failed.'
     }
 
     addFatal: (error, meta) ->
