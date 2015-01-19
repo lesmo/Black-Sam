@@ -18,11 +18,6 @@ module.exports = (app) ->
   # getting a shit-ton of useless lines in logs
   #app.use serve_favicon "#{__dirname}/assets/favicon.ico"
 
-  # Morgan logs requests from browser. Used ONLY if logging level
-  # is info (super verbose).
-  if app.get('log level') is 'info'
-    app.use morgan 'combined'
-
   # These are quite obvious
   app.use serve_static "#{__dirname}/static"
   app.use connect_assets paths: [
@@ -34,6 +29,11 @@ module.exports = (app) ->
   # Long-ass routing's used to prevent funny things happening
   app.use '/assets/bootswatch-dist/fonts',
     serve_static "#{__dirname}/../bower_components/bootswatch-dist/fonts"
+
+  # Morgan logs requests from browser. Used ONLY if logging level
+  # is info (super verbose).
+  if app.get('log level') is 'info'
+    app.use morgan 'combined'
 
   app.use express_session
     secret: app.get 'session secret'
