@@ -15,9 +15,9 @@ block body
                 img(src='/img/brand.png')
 
             .navbar-collapse.collapse.navbar-responsive-collapse
-              form.navbar-form.navbar-left
+              form.navbar-form.navbar-left(method='get', action='/search')
                 .input-group
-                  input.form-control(placeholder='Search', type='text')
+                  input.form-control(placeholder='Search', type='text', name='q')
 
               ul.nav.navbar-nav.navbar-left
                 li
