@@ -1,6 +1,6 @@
-extends layout
+extends ../layout
 
-mixin torrent
+mixin torrent_item(torrent)
    span.wide
       span.panel.panel-default
          span.panel-heading
@@ -11,15 +11,15 @@ mixin torrent
          span.panel-body
             span.row
                span.uploader.col-xs-4
-                  small= 'by' + torrent.uploader
+                  small= 'by ' + helpers.user.getDisplayName(torrent.uploader)
                span.counts.col-xs-8
                   small
-                     span.badge= torrent.seeds
+                     span.badge= torrent.seeders
                      | &nbsp;
                      | seeds
                   | &nbsp;
                   small
-                     span.badge= torrent.leechs
+                     span.badge= torrent.leechers
                      | &nbsp;
                      | leechs
             span.row
@@ -35,12 +35,16 @@ mixin torrent
                   .btn-group.btn-group-sm
                      a(href=torrent.magnet).btn.btn-success
                         | Magnet Link
-                     a(href=helpers.url.torrent_url_file(torrent.id)).btn.btn-success
+                     a(href=helpers.url.torrent_file(torrent.id)).btn.btn-success
                         | Download Torrent
 
-if useAjaxLayout
-   .item.col-sm-12.col-md-8
-      +torrent
-else
-   .item.col-xs-12
-      +torrent
+block head
+   != css('css/search')
+block content
+   if useAjaxLayout
+      .item.col-sm-12.col-md-8
+         +torrent_item(torrent)
+   else
+      .row
+         .item.col-xs-12
+            +torrent_item(torrent)
