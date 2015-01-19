@@ -3,11 +3,11 @@ extends ../layout
 block head
    != css('css/login-register')
 block footer_js
-   != js('cryptojslib/components/core-min.js')
-   != js('cryptojslib/components/x64-core-min.js')
-   != js('cryptojslib/components/ripemd160-min.js')
-   != js('cryptojslib/components/sha256-min.js')
-   != js('cryptojslib/components/sha512-min.js')
+   != js('cryptojslib/components/core')
+   != js('cryptojslib/components/x64-core')
+   != js('cryptojslib/components/ripemd160')
+   != js('cryptojslib/components/sha256')
+   != js('cryptojslib/components/sha512')
    != js('js/login')
 block content
    form.login-register.login(method='post')
@@ -15,6 +15,10 @@ block content
       input#hiddenUserhash(type='hidden', name='userhash')
 
       h2 Login
+
+      p
+         | If you don't have an account, you can <a href="/account/new">create one here</a>.
+         | Remember that you should only register if you plan to contribute Torrents.
 
       each error in errors.fatal
          .alert.alert-danger

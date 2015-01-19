@@ -3,11 +3,11 @@ extends ../layout
 block head
    != css('css/login-register')
 block footer_js
-   != js('cryptojslib/components/core-min.js')
-   != js('cryptojslib/components/x64-core-min.js')
-   != js('cryptojslib/components/ripemd160-min.js')
-   != js('cryptojslib/components/sha256-min.js')
-   != js('cryptojslib/components/sha512-min.js')
+   != js('cryptojslib/components/core')
+   != js('cryptojslib/components/x64-core')
+   != js('cryptojslib/components/ripemd160')
+   != js('cryptojslib/components/sha256')
+   != js('cryptojslib/components/sha512')
    != js('js/register')
 block content
    form.login-register.register(method='post')
