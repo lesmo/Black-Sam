@@ -1,15 +1,30 @@
-extends layout
+extends ../layout
 
 block head
+   != css('jquery-loading/dist/jquery.loading')
    != css('css/upload')
+block footer_js
+   != js('jquery-loading/dist/jquery.loading')
+   != js('js/upload')
 block content
-   form(method='post')
+   form#formTorrent(method='post')
+      input(type='hidden', name='_csrf', value= csrf_token())
+
       .row
          .col-sm-10.col-sm-offset-1
             h2 Contribute new Torrent
 
-            .alert.alert-info
-               p You're very unlikely to be able to upload files because your device is known not to support the storage of regular files outside of multimedia types. You may not be able to upload a *.torrent file or sign this contribution.
+            .row
+               .col-xs-12
+                  if clientCrippledUpload
+                     .alert.alert-info
+                        p You're very unlikely to be able to upload files because your device is known not to support the storage of regular files outside of multimedia types. You may not be able to upload a *.torrent file or sign this contribution.
+                  each error in errors.fatal
+                     .alert.alert-danger
+                        p= error.message
+                  each error in errors.validation
+                     .alert.alert-danger
+                        p= '[' + error.field + '] ' + error.message
 
             .row
                .col-md-4
@@ -36,27 +51,21 @@ block content
                               small &nbsp;(required)
                            p Pick the best category this Torrent fits into. Use <strong>Others</strong> when no other category seems to be adequate.
 
-                           each category, subcategories in helpers.config.get('categories')
-                              optgroup(label=category.titleize())
-                                 each subcategory in subcategories
-                                    option(value=category + '#' + subcategory)= subcategory.titleize()
-                                 option(value=category) 'Others'
+                           p.text-center
+                              select#selectCategory(name='torrent_category', required)
+                                 each subcategories, category in helpers.config.get('categories')
+                                    optgroup(label=category.titleize())
+                                       each subcategory in subcategories
+                                          option(value=category + '#' + subcategory)= subcategory.titleize()
+                                       option(value=category) Other
                .col-md-8
-                  .form-group
-                     h3 Title
-                        small &nbsp;(required)
-                     p Provide a title for this Torrent. Be as descriptive and concise in this field as possible, as this is the first thing users see while browsing or searching.
-                     input.form-control(type='text', name='torrent_title', placeholder='Torrent Title')
-                  .form-group
+                  #groupDescription.form-group
                      h3 Description
                      p You can enter a description here, but you can skip it. This supports <strong>Markdown Syntax</strong>, so you can provide richer descriptions to users about this Torrent. Make an effort to properly describe the Torrent, as this text's contents are used for the search index.
 
                      p
-                        textarea.form-control(style='min-height:300px', name='torrent_description')
+                        textarea#textareaDescription.form-control(style='min-height:300px', name='torrent_description')
 
-                     p.javascript-only If you preffer, you can also click "Retrieve from README in Torrent" to automatically fill this for you from a README file inside this Torrent:
-                     p.javascript-only.text-center
-                        button.btn.btn-primary(type='button') Retrieve from README in Torrent
             // functionality is not ready yet
                .row
                   .col-md-4
@@ -78,8 +87,10 @@ block content
                               button#buttonGenerateSignature.btn.btn-primary Generate Signature in the Browser
                         p
                            textarea.form-control(type='text', name='torrent_signature')
-            .row
+            .row(style='margin-top:48px')
                .col-xs-12
                   .form-group
                      p.text-center
                         button.btn.btn-success.btn-lg(type='submit') Submit new Torrent
+                     p.text-center
+                        small Remember, upload could take some time, so please be patient.
