@@ -1,4 +1,4 @@
-module.exports = (cfg, log) ->
+module.exports = (helpers, cfg, log) ->
   ###
     Keeps an instance of the Search Index object and allows easy access to
     commonly used Search-related functions.

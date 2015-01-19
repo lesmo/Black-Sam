@@ -88,7 +88,7 @@ module.exports = (app) ->
   autoload "#{__dirname}/helpers"
     , app.helpers
     , 'blacksam-helper'
-    , readonly_config
+    , [app.helpers, readonly_config]
   app.helpers.config = readonly_config
 
   # Controllers

@@ -1,4 +1,4 @@
-module.exports = (cfg, log) ->
+module.exports = (helpers, cfg, log) ->
   async = require 'async'
 
   class workers

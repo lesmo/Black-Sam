@@ -1,4 +1,4 @@
-module.exports = (cfg) ->
+module.exports = (helpers, cfg, log) ->
   base32 = require 'base32'
 
   ###

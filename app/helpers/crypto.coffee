@@ -1,4 +1,4 @@
-module.exports = (cfg, log) ->
+module.exports = (helpers, cfg, log) ->
   class crypto
     @js = cryptojs = require('crypto-js')
 

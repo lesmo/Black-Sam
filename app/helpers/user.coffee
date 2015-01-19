@@ -1,5 +1,4 @@
-module.exports = (cfg, log) ->
-  user_crypto = require('./crypto')(cfg, log).user # this is a hack
+module.exports = (helpers, cfg, log) ->
   fs = require 'fs-extra'
   q = 'q'
 
@@ -10,7 +9,7 @@ module.exports = (cfg, log) ->
     ###
       An alias for {helpers.crypto.user.getHash}
     ###
-    @getHash = user_crypto.getHash
+    @getHash = helpers.crypto.user.getHash
 
     ###
       The Middleware associates the User object to the {req} object, and
@@ -63,7 +62,7 @@ module.exports = (cfg, log) ->
     ###
     @create = (username, password, callback) ->
       if callback
-        userhash = user_crypto.getHash username, password
+        userhash = @getHash username, password
       else if userhash = @validHash username
         callback = password
       else
