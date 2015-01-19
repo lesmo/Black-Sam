@@ -1,6 +1,6 @@
 $ ->
   # Display javascript only tags
-  $('.javascript-only').css('display', 'inline')
+  $('.javascript-only').removeClass('javascript-only')
 
   # Remove noscript tags for the lulz
   $('noscript').remove()
