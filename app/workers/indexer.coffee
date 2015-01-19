@@ -19,11 +19,18 @@ module.exports = (helpers, log) ->
     info_hash = path.basename(filepath).match(/(.*)\..*/i)[1].toUpperCase()
     parsed_torrent = parse_torrent fs.readFileSync filepath
 
-    category = path.basename path.dirname filepath
-    category = if category is userhash then 'others' else category.toLowerCase()
+    category    = path.basename path.dirname path.dirname filepath
+    subcategory = path.basename path.dirname filepath
 
-    subcategory = path.basename path.dirname path.dirname filepath
-    subcategory = if subcategory is userhash then '' else subcategory.toLowerCase()
+    if subcategory is userhash
+      category    = 'others'
+      subcategory = ''
+    else if category is userhash
+      category    = subcategory.toLowerCase()
+      subcategory = ''
+    else
+      category    = category.toLowerCase()
+      subcategory = subcategory.toLowerCase()
 
     created = null
 
@@ -95,7 +102,7 @@ module.exports = (helpers, log) ->
     if helpers.torrent.validHash(info_hash) and info_hash is parsed_torrent.infoHash.toUpperCase()
       helpers.search.index.get info_hash, (err, _torrent_meta) ->
         if err or not _torrent_meta?
-          log.info "Torrent [#{info_hash}] not in Index"
+          log.info "Torrent [#{info_hash}] not in Index, adding..."
         else
           _torrent_meta = JSON.parse _torrent_meta
           delete _torrent_meta['*']
