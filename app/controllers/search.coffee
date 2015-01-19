@@ -1,5 +1,5 @@
 module.exports = (helpers) ->
-  class search
+  class SearchController
     @routes = (router) ->
       router.get '/autocomplete', (req, res) ->
         autocomplete req, res,

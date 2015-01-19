@@ -3,7 +3,7 @@ module.exports = (helpers) ->
     This Controller handles the Login and Creation of User Accounts, as well as the
     upload and validation of User Certificates.
   ###
-  class account
+  class AccountController
     ###
       Prepare the Routes that target this Controller.
 
