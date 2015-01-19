@@ -36,8 +36,8 @@ module.exports = (app) ->
         else
           args = []
 
-        if logcat? and typeof logging is 'function'
-          args.push logger "#{logcat}.#{cls}"
+        if logcat? and typeof logger is 'function'
+          args.add logger("#{logcat}.#{cls}")
 
         obj[cls] = req.apply null, args
         app.log?.info "Loaded {#{cls}} from #{filepath}"
