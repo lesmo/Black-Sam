@@ -22,15 +22,15 @@ app.log.info "BlackSam controllers, helpers and settings loaded"
 
 # Load Middleware
 blacksam.middleware app
-app.log.info "BlackSam Middleware attached"
+app.log.info "BlackSam middleware attached"
 
 for h, helper of app.helpers when helper?.middleware?
   app.use helper.middleware
-  app.log.info "Helper Middleware {#{h}.middleware()} attached"
+  app.log.info "Helper middleware {#{h}.middleware()} attached"
 
 # Load routing
 blacksam.routes app, express
-app.log.info "BlackSam Controllers routing initialized"
+app.log.info "BlackSam controllers routing initialized"
 
 # Start the server
 app.listen app.get('port'), ->
