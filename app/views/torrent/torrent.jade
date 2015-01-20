@@ -6,7 +6,7 @@ mixin torrent_item(torrent)
          span.panel-heading
             span.row
                span.title.col-xs-12
-                  img(src='//cdn4.iconfinder.com/data/icons/small-n-flat/24/file-word-128.png')
+                  img(src=helpers.url.torrent_cat_icon(torrent.category))
                   strong= torrent.title
          span.panel-body
             span.row
@@ -28,18 +28,21 @@ mixin torrent_item(torrent)
                      if torrent.description
                         != helpers.markdown(torrent.description)
                      else
-                        p <i>No description available</i>
+                        p.text-center <i>No description available</i>
          span.panel-footer
             span.row
                span.col-xs-12
                   .btn-group.btn-group-sm
                      a(href=torrent.magnet).btn.btn-success
+                        span.glyphicon.glyphicon-magnet
                         | Magnet Link
                      a(href=helpers.url.torrent_file(torrent.id)).btn.btn-success
+                        span.glyphicon.glyphicon-download-alt
                         | Download Torrent
 
 block head
-   != css('css/search')
+   unless useAjaxLayout
+      != css('css/search')
 block content
    if useAjaxLayout
       .item.col-sm-12.col-md-8
