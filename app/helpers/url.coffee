@@ -48,7 +48,7 @@ module.exports = (helpers, cfg, log) ->
     ### URL to a Torrent file ###
     @torrent_file = (id) -> "/torrent/#{@hash_mask id}.torrent"
 
-    @torrent_cat_icon = (category) -> ""
+    @torrent_cat_icon = (category) -> "/img/cat/#{category}.png"
 
     ### URL to a Search page ###
     @search = (query, page) ->
