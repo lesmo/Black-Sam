@@ -8,7 +8,7 @@
   ignore it and never sync nor show them in search results.
 ###
 module.exports = (cfg) ->
-  # Category names must be lowercase, or they'll be ignored.
+  # Category names must be lowercase, or chaos will ensue.
   # If you remove any, remember users might try to upload
   # wrongly-categorized content.
   cfg.set 'categories', {
