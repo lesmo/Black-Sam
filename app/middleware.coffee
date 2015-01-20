@@ -41,4 +41,8 @@ module.exports = (app) ->
     saveUninitialized: false
 
   app.use body_parser.urlencoded extended: true
+
   app.use csrf()
+  app.use (req, res, next) ->
+    res.locals.csrf_token = req.csrfToken
+    next()

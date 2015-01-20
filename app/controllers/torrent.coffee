@@ -1,15 +1,11 @@
 module.exports = (helpers, log) ->
   parse_torrent = require 'parse-torrent'
-  async = require 'async'
-  multer = require 'multer'
-  fs = require 'fs-extra'
+  async         = require 'async'
+  multer        = require 'multer'
+  fs            = require 'fs-extra'
 
   class TorrentController
     @routes = (router) ->
-      router.use (req, res, next) ->
-        res.locals.csrf_token = req.csrfToken
-        next()
-
       router.use multer {
         dest: helpers.config.get 'sultanna_dir',
         limits:

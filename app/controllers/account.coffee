@@ -10,10 +10,6 @@ module.exports = (helpers) ->
       @oaram router (Object) express.Router() object
     ###
     @routes = (router) ->
-      router.use (req, res, next) ->
-        res.locals.csrf_token = req.csrfToken
-        next()
-
       router.get '/new' , (req, res) -> res.render 'account/register'
       router.get '/login', (req, res) -> res.render 'account/login'
 
