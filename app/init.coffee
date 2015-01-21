@@ -24,23 +24,23 @@ module.exports = (app) ->
       stat = fs.lstatSync filepath
       cls  = file.match(/([0-9a-z]+)(\.[0-9a-z]+)?/i)[1]
 
-      if stat.isDirectory()
-        autoload filepath, obj, logcat, args
-      else if not obj[cls]?
-        req = require filepath
-        continue if typeof req isnt 'function'
+      if not stat.isFile() and not obj[cls]?
+        continue
 
-        if args?
-          if not Array.isArray args
-            args = [args]
-        else
-          args = []
+      req = require filepath
+      continue if typeof req isnt 'function'
 
-        if logcat? and typeof logger is 'function'
-          args.add logger("#{logcat}.#{cls}")
+      if args?
+        if not Array.isArray args
+          args = [args]
+      else
+        args = []
 
-        obj[cls] = req.apply null, args
-        app.log?.info "Loaded {#{cls}} from #{filepath}"
+      if logcat? and typeof logger is 'function'
+        args.add logger("#{logcat}.#{cls}")
+
+      obj[cls] = req.apply null, args
+      app.log?.info "Loaded {#{cls}} from #{filepath}"
 
   readonly_config = {
     get: (k) -> app.get k
