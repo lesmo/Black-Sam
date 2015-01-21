@@ -11,6 +11,14 @@ module.exports = (helpers, cfg, log) ->
 
         return hash
 
+      @getLockHash = (username, password) ->
+        if password?
+          hash = username + password
+        else
+          hash = username.toUpperCase()
+
+        return cryptojs.SHA512(hash).toString().toUpperCase()
+
       @validJson = (userhash, jsonpath) ->
         if not Object.isString jsonpath
           json = jsonpath
