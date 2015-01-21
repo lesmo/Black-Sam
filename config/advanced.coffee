@@ -1,5 +1,5 @@
 ###
-  These are advenced settings that heavily change how BlackSam behaves. Most
+  These are advanced settings that heavily change how BlackSam behaves. Most
   of these are OK the way they currently are.
 
   Only change them if you know what you're doing.
@@ -16,14 +16,26 @@ module.exports = (cfg) ->
   # Un-comment this line if you want to disable Web Uploading.
   #cfg.disable 'web upload'
 
-  # Comment this line if you want to disable the Indexer Worker.
-  # This is not recommended. Honestly, I don't know why I put it
-  # there. Just don't touch it.
+  # This enables or disables different Workers
   cfg.enable 'run indexer worker'
+  cfg.enable 'run importer worker'
 
   # Max number of errors a Worker is allowed before stopping
   # further attempts at reviving it.
   cfg.set 'max worker fails', 100
+
+  # This is the frequency with which each Worker is run after it
+  # finishes it's job. This is not strict, timing starts when the
+  # Worker has finished it's last job, which in some cases could
+  # be several minutes.
+  cfg.set 'worker timespan', 1000 * 3600 # 1 hour
+
+  # If you want to set a timespan for a specific Worker, you can
+  # set it like the Cleanup Worker's timespan is set below. Note
+  # that Cleanup Worker creates a file called "cleanup.json"
+  # that keeps the last date the cleanup was ran, so it's not
+  # lost if BlackSam is killed.
+  cfg.set 'worker cleanup timespan', 1000 * 3600 * 24 * 3 #3 days
 
   # Comment this line to kill BlackSam when the number above is
   # reached by a Worker. It's recommended to disable this on

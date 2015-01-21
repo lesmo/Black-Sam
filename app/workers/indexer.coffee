@@ -2,7 +2,8 @@
   Go through all directories in [marianne] and retrieve available Torrents, and
   make sure they're properly Indexed.
 
-  NOTE: I know this might not be the most-readable piece of code, but works.
+  NOTE: I know this might not be the most-readable piece of code, but works. I'll
+         fix it later. Promise.
 ###
 
 module.exports = (helpers, log) ->
@@ -233,7 +234,7 @@ module.exports = (helpers, log) ->
 
         worker.drain = ->
           log.info "Torrents indexing finished", stats
-          setTimeout finish, helpers.config.get 'indexer timespan'
+          finish()
 
         # If there's nothing, setup next call
         worker.drain() if worker.length() is 0
