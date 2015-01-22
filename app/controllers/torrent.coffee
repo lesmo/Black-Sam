@@ -78,7 +78,8 @@ module.exports = (helpers, log) ->
         torrent_page req, res, next, req.params.id.toUpperCase()
 
     torrent_page = (req, res, next, torrent_id) ->
-      return next() if not torrent_id?
+      if not torrent_id?
+        return next()
 
       helpers.search.index.get torrent_id, (err, torrent) ->
         if err or not torrent?
@@ -95,9 +96,8 @@ module.exports = (helpers, log) ->
             fs.stat "#{helpers.torrent.getPath torrent}.torrent", callback
         ], (err, files) ->
           if err or not files[1]?.isFile() or files[1].size > helpers.config.get('max file size')
-            helpers.search.index.del torrent_id, (err) ->
-              log.warn err or "[#{torrent_id}.torrent] is not a file, or too large. Deleted from Search Index."
-              next()
+            log.warn err?.message ? "[#{torrent_id}.torrent] is not a file, or too large. Deleting from Search Index..."
+            helpers.search.index.del torrent_id, next
           else
             if files[0]?.size < helpers.config.get('max file size')
               torrent.description = fs.readFileSync("#{helpers.torrent.getPath torrent}.md").toString()
@@ -129,33 +129,60 @@ module.exports = (helpers, log) ->
         , subcategory
         , torrent.infoHash
 
-      if fs.existsSync "#{torrent_store_path}.torrent"
-        res.errors.addFatal 'blacksam.upload.exists'
-        return res.render 'torrent/upload'
+      async.waterfall [
+        # Determine if Torrent already exists
+        (next_step) ->
+          fs.exists "#{torrent_store_path}.torrent", (exists) ->
+            if exists
+              next_step res.errors.addFatal 'blacksam.upload.exists'
+            else
+              next_step()
 
-      helpers.torrent.findMetadata torrent, (err, metadata, parsed_torrent) ->
-        if err
-          res.errors.addFatal 'blacksam.upload.invalid', error: err
-          return res.render 'torrent/upload'
+        # Find Torrent metadata
+        (next_step) ->
+          helpers.torrent.findMetadata torrent, next_step
 
-        torrent_buffer = parse_torrent.toTorrentFile parsed_torrent
-        metadata.magnet = parse_torrent.toMagnetURI parsed_torrent
+        # Parse to Torrent File Buffer and Indexable object
+        (metadata, parsed_torrent, next_step) ->
+          try
+            torrent_buffer = parse_torrent.toTorrentFile parsed_torrent
+            metadata.magnet = parse_torrent.toMagnetURI parsed_torrent
 
-        log.info "Writing Torrent file to #{torrent_store_path}.torrent"
+            if description?.length > 8
+              metadata.description = description.parameterize().spacify()
 
-        fs.outputFile "#{torrent_store_path}.torrent", torrent_buffer, (err) ->
-          if err
-            log.error "Failed writing Torrent file to #{torrent_store_path}.torrent"
-            res.errors.addFatal 'blacksam.upload.failed', error: err
-            return res.render 'torrent/upload'
+            next_step null, metadata, torrent_buffer, description
+          catch e
+            next_step e
 
-          if description?.length > 8
-            fs.outputFile "#{torrent_store_path}.md", description
-            metadata.description = description.parameterize().spacify()
+        # Write Torrent File and Description File
+        (metadata, torrent_buffer, description, next_step) ->
+          async.parallel [
+            (done) ->
+              fs.outputFile "#{torrent_store_path}.torrent", torrent_buffer, done
+            (done) ->
+              if description?.length > 8
+                fs.outputFile "#{torrent_store_path}.md", description, done
+              else
+                done()
+          ], (err) ->
+            if err
+              next_step res.errors.addFatal('blacksam.upload.failed')
+            else
+              next_step null, metadata
 
+        # Index the Torrent
+        (metadata, next_step) ->
           helpers.search.indexTorrent metadata, (err) ->
             if err
-              res.errors.addFatal 'blacksam.upload.index_failed', error: err
-              res.render 'torrent/upload'
+              next_step res.errors.addFatal('blacksam.upload.index_failed', error: err)
             else
-              res.redirect helpers.url.torrent(parsed_torrent.infoHash)
+              next_step null, metadata
+      ], (err, metadata) ->
+        if err?
+          if not err.type?.match /^blacksam\./
+            res.errors.addFatal 'blacksam.upload.invalid', error: err
+
+          res.render 'torrent/upload'
+        else
+          res.redirect helpers.url.torrent(metadata.infoHash)

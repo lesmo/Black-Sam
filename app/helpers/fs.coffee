@@ -8,7 +8,8 @@ module.exports = (helpers, log) ->
         return callback err if err
 
         async.series [
-          (next_step) -> # Retreive all files' stats
+          # Retrieve all files' stats
+          (next_step) ->
             async.map files
               , (item, next_file) ->
                 fs.lstat "#{dirpath}/#{item}", (err, stat) ->
@@ -18,17 +19,17 @@ module.exports = (helpers, log) ->
                     stat = {}
 
                   next_file err, stat
-              , (err, files) ->
-                next_step err, files
-          (next_step, files_stats) -> # Create the files' paths array
+              , next_step
+
+          # Create the files' paths array
+          (files_stats, next_step) ->
             async.map files_stats
               , (item, next_file) ->
                 if item.isFile()
                   next_file null, item.path
                 else
                   @traverseDir item.path, next_file
-              , (err, files) ->
-                callback err, files
+              , next_step
         ], (err, files_paths) ->
           if files_paths?
             files_paths = files_paths.flatten()

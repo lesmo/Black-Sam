@@ -8,7 +8,7 @@ module.exports = (helpers, cfg, log) ->
   ###
   class torrent_helper
     ### WebTorrent Client Instance ###
-    @client = new (require 'webtorrent')()
+    @client = new require('webtorrent')()
 
     ###
       Validates that a given String is a (possibly) valid InfoHash.
@@ -45,7 +45,7 @@ module.exports = (helpers, cfg, log) ->
       return path.join cfg.get('marianne path'),
         helpers.user.validHash(userhash),
         category.toUpperCase(),
-        (subcategory or '').toUpperCase(),
+        (subcategory ? '').toUpperCase(),
         hash.toUpperCase()
 
     @remove = (torrent_id) ->
@@ -115,7 +115,7 @@ module.exports = (helpers, cfg, log) ->
       @get torrent_id, (err, torrent) =>
         if err or not torrent?
           @remove torrent
-          return callback err or new Error('Torrent metadata not retrieved')
+          return callback err ? new Error('Torrent metadata not retrieved')
 
         indexable_files_string =
           (file.path for file in torrent.files)

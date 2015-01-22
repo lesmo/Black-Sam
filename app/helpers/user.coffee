@@ -1,6 +1,5 @@
 module.exports = (helpers, cfg, log) ->
   fs = require 'fs-extra'
-  q = 'q'
 
   ###
     Facilitates the interaction with User Accounts, their folders, hashing and validations.
@@ -29,7 +28,7 @@ module.exports = (helpers, cfg, log) ->
 
       regex_match = hash.match /^(1\-)?([0-9A-F]{40})$/i
 
-      if regex_match?.length is 3
+      if regex_match?
         return "1-#{regex_match[2]}"
       else
         return undefined
@@ -82,10 +81,11 @@ module.exports = (helpers, cfg, log) ->
     @getDisplayName = (userhash) ->
       userpath = @getLocalPath userhash
 
-      return 'invalid' if not userpath?
+      if not userpath?
+        return 'invalid'
 
       for file in fs.readdirSync userpath
-        diplay_name = file.match(/^user\.(.+)\.json$/i)?[1]
+        display_name = file.match(/^user\.(.+)\.json$/i)?[1]
         return display_name if display_name?
 
       # If we got to here, no user json file was found
@@ -104,11 +104,13 @@ module.exports = (helpers, cfg, log) ->
       for file in fs.readdirSync userpath when display_name = file.match /^user\.(.+)\.json$/i
         userjson = fs.readJSONSync "#{userpath}/#{file}"
 
-        if userjson?
-          userjson.displayName = display_name[1]
+        if not userjson?
+          continue
 
-          delete userjson.seedhash
-          return userjson
+        userjson.displayName = display_name[1]
+
+        delete userjson.seedhash
+        return userjson
 
       # If we got to here, no user json file was found
       return anonymous

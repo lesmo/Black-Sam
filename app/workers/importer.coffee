@@ -22,11 +22,11 @@ module.exports = (helpers, log) ->
         async.mapLimit filepaths
           , helpers.config.get('importer torrents per batch')
           , (filepath, next_file) ->
-            if not filepath.endsWith 'magnet', undefined, true
+            if not filepath.match /\.magnet$/i
               return next_file null, filepath
 
             async.waterfall [
-              # Retrieve magnet link from file
+              # Retrieve Magnet Link from file
               (next) ->
                 line_reader.eachLine path, (line) ->
                   next null, line
@@ -48,7 +48,7 @@ module.exports = (helpers, log) ->
 
               # Write to *.torrent file
               (info_hash, buffer, next) ->
-                new_filepath = filepath.replace /[^/]+$/, "#{info_hash}.torrent"
+                new_filepath = filepath.replace /[^/]+$/, "#{info_hash.toUpperCase()}.torrent"
 
                 fs.outputFile new_filepath, buffer, (err) ->
                   next err, new_filepath
@@ -61,11 +61,17 @@ module.exports = (helpers, log) ->
                 next_file null, null # Ignore the file entirely
               else
                 next_file null, new_filepath
-          , next_step
+          , (err, new_filepaths) ->
+            new_filepaths = new_filepaths.compact()
+            skipped = filepaths.length - new_filepaths.length
+
+            log.info "[Importer] Converted #{new_filepaths.length} (skipped #{skipped}) Magnet Links to Torrent Files"
+
+            next_step err, new_filepaths
 
       # Rename Torrent files to {infoHash}.torrent
       (filepaths, next_step) ->
-        async.mapLimit filepaths.compact()
+        async.mapLimit filepaths
           , helpers.config.get('importer torrents per batch')
           , (filepath, next_file) ->
             torrent = parse_torrent filepath
@@ -83,11 +89,16 @@ module.exports = (helpers, log) ->
                   next_file null, null # Ignore the file entirely
                 else
                   next_file null, new_filepath
-          , next_step
+          , (err, new_filepaths) ->
+            new_filepaths = new_filepaths.compact()
+            skipped = filepaths.length - new_filepaths.length
+
+            log.info "[Importer] Renamed #{new_filepaths.length} (skipped #{skipped}) Torrent Files to {hash}.torrent"
+
+            next_step err, new_filepaths
 
       # Calculate userdirs (and locks if required)
       (filepaths, next_step) ->
-        filepaths = filepaths.compact()
         files_per_dir = helpers.config.get 'importer random userdir torrents'
 
         folders_torrents = {}
@@ -120,6 +131,7 @@ module.exports = (helpers, log) ->
               folders_torrents[random_userpath] =
                 filepaths[i * files_per_dir ..]
 
+        log.info "[Importer] Moving Torrents to #{userdirs ? 'a configured'} userdir..."
         next_step null, folders_torrents, folders_locks
 
       # Move Torrent files
@@ -128,7 +140,9 @@ module.exports = (helpers, log) ->
           helpers.fs.move work.tmp, work.dest, next
 
         queue.concurrency = helpers.config.get 'importer torrents per batch'
-        queue.drain = () -> next_step(null, folders_locks)
+        queue.drain = () ->
+          log.info "[Importer] Torrents Moved"
+          next_step(null, folders_locks)
 
         for folder, torrents of folders_torrents
           for torrent in torrents
@@ -145,11 +159,13 @@ module.exports = (helpers, log) ->
           helpers.fs.outputFile work.path, work.hash, next
 
         queue.concurrency = helpers.config.get 'importer torrents per batch'
-        queue.drain = next_step
+        queue.drain = () ->
+          log.info "[Importer] User Locks created"
+          next_step()
 
         for path, hash of folder_locks
           queue.push path: path, hash: hash
 
         if not queue.started() # in case there's no locks to make
-          queue.drain()
+          next_step()
     ]

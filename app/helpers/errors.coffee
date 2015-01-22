@@ -22,13 +22,14 @@ module.exports = (helpers, cfg, log) ->
           e.type = error
 
           if meta?
-            @fatal.add Object.merge e, meta
-          else
-            @fatal.add e
+            e = Object.merge e, meta
         else
-          @fatal.add new Error(error)
+          e = new Error(error)
       else
-        @fatal.add error
+        e = error
+
+      @fatal.add e
+      return e
     addFatalClient: @addFatal
 
     addValidation: (field, error) ->

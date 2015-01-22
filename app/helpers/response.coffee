@@ -2,7 +2,7 @@ module.exports = () ->
   ###
     Pre-process response output.
   ###
-  class response
+  class ResponseHelper
     ###
       Check if the request has to be "bare", with no navbar or fancy stuff,
       or "ajax", without even a body tag and whatnot.
