@@ -66,12 +66,17 @@ module.exports = (helpers, cfg, log) ->
       @param torrent_id (String|Object) A Parse-Torrent result, a Magnet URI or a Buffer of a *.torrent file
     ###
     @get = (torrent_id, callback) ->
+      try
+        torrent_id = parse_torrent torrent_id
+      catch e
+        callback e
+
       torrent = undefined
       timeout = setTimeout =>
         timeout = undefined
         @remove torrent
 
-        log.warn "Metadata retrieval timed-out for [#{torrent?.infoHash or 'null'}] Torrent"
+        log.warn "Metadata retrieval timed-out for [#{torrent?.infoHash ? 'null'}] Torrent"
 
         callback new Error('Metadata retrieval timed-out'), null
       , cfg.get 'torrent process timeout'
