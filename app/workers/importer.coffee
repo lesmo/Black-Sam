@@ -9,13 +9,14 @@ module.exports = (helpers, log) ->
   else
     return async.apply async.waterfall, [
       # Retrieve all paths inside {sultanna path}/import folder
-      async.apply helpers.fs.traverseDir, "#{helpers.config.get 'sultanna path'}/import"
+      (next_step) ->
+        helpers.fs.traverseDir "#{helpers.config.get 'sultanna path'}/import", next_step
 
       # Filter-out any unknown file types
       (filepaths, next_step) ->
         async.filter filepaths
-          , ((path, cb) -> cb path.match /\.(torrent|magnet)$/i)
-          , next_step
+          , ((path, cb)      -> cb path.match /\.(torrent|magnet)$/i)
+          , ((new_filepaths) -> next_step null, new_filepaths)
 
       # Convert Magnet Links to Torrent files
       (filepaths, next_step) ->
@@ -28,7 +29,7 @@ module.exports = (helpers, log) ->
             async.waterfall [
               # Retrieve Magnet Link from file
               (next) ->
-                line_reader.eachLine path, (line) ->
+                line_reader.eachLine filepath, (line) ->
                   next null, line
                   return false
 
@@ -50,22 +51,24 @@ module.exports = (helpers, log) ->
               (info_hash, buffer, next) ->
                 new_filepath = filepath.replace /[^/]+$/, "#{info_hash.toUpperCase()}.torrent"
 
-                fs.outputFile new_filepath, buffer, (err) ->
+                helpers.fs.outputFile new_filepath, buffer, (err) ->
                   next err, new_filepath
 
               # Delete *.magnet file
               (new_filepath, next) ->
                 helpers.fs.remove filepath, next
             ], (err, new_filepath) ->
-              if err
+              if err?
                 next_file null, null # Ignore the file entirely
               else
                 next_file null, new_filepath
           , (err, new_filepaths) ->
             new_filepaths = new_filepaths.compact()
-            skipped = filepaths.length - new_filepaths.length
 
-            log.info "[Importer] Converted #{new_filepaths.length} (skipped #{skipped}) Magnet Links to Torrent Files"
+            converted = (p for p in new_filepaths when p.match /\.magnet$/i).length
+            skipped   = (p for p in filepaths when p.match /\.magnet$/i).length - converted
+
+            log.info "[Importer] Converted #{converted} Magnet Links to Torrent Files (skipped #{skipped})"
 
             next_step err, new_filepaths
 
@@ -74,31 +77,44 @@ module.exports = (helpers, log) ->
         async.mapLimit filepaths
           , helpers.config.get('importer torrents per batch')
           , (filepath, next_file) ->
-            torrent = parse_torrent filepath
+            async.waterfall [
+              (next) ->
+                helpers.fs.readFile filepath, next
 
-            if not torrent?
-              return next_file null, null # Ignore the file entirely
+              (torrent_data, next) ->
+                torrent = parse_torrent torrent_data
 
-            new_filepath = filepath.replace /[^/]+$/, "#{torrent.infoHash}.torrent"
-
-            if filepath is new_filepath
-              next_file null, new_filepath
-            else
-              helpers.fs.move filepath, new_filepath, {clobber: true}, (err) ->
-                if err
-                  next_file null, null # Ignore the file entirely
+                if torrent?
+                  next null, filepath.replace(/[^/]+$/, "#{torrent.infoHash.toUpperCase()}.torrent")
                 else
-                  next_file null, new_filepath
+                  next new Error()
+
+              (new_filepath, next) ->
+                if filepath is new_filepath
+                  next null, new_filepath
+                else
+                  helpers.fs.move filepath, new_filepath, {clobber: true}, (err) ->
+                    next err, new_filepath
+            ], (err, new_filepath) ->
+              if err
+                next_file null, null
+              else
+                next_file null, new_filepath
           , (err, new_filepaths) ->
             new_filepaths = new_filepaths.compact()
-            skipped = filepaths.length - new_filepaths.length
 
-            log.info "[Importer] Renamed #{new_filepaths.length} (skipped #{skipped}) Torrent Files to {hash}.torrent"
+            converted = new_filepaths.length
+            skipped   = filepaths.length - converted
+
+            log.info "[Importer] Renamed #{new_filepaths.length} Torrent Files to {hash}.torrent (skipped #{skipped})"
 
             next_step err, new_filepaths
 
       # Calculate userdirs (and locks if required)
       (filepaths, next_step) ->
+        if filepaths.length is 0
+          return next_step null, {}, {}
+
         files_per_dir = helpers.config.get 'importer random userdir torrents'
 
         folders_torrents = {}
@@ -111,8 +127,8 @@ module.exports = (helpers, log) ->
           userdirs = Math.floor(userdirs) + 1
 
           for i in [0...userdirs]
-            random_username = (Math.random().toString() + '056127539128').slice(2, 20)
-            random_password = (Math.random().toString() + '056127539128').slice(2, 20)
+            random_username = (Math.random().toString() + '843910248184').slice(2, 20)
+            random_password = (Math.random().toString() + '097654345771').slice(2, 20)
 
             random_username = helpers.crypto.js.SHA1(random_username).toString()
             random_password = helpers.crypto.js.SHA1(random_password).toString()
@@ -131,41 +147,44 @@ module.exports = (helpers, log) ->
               folders_torrents[random_userpath] =
                 filepaths[i * files_per_dir ..]
 
-        log.info "[Importer] Moving Torrents to #{userdirs ? 'a configured'} userdir..."
         next_step null, folders_torrents, folders_locks
 
       # Move Torrent files
       (folders_torrents, folders_locks, next_step) ->
-        queue = async.queue (work, next) ->
-          helpers.fs.move work.tmp, work.dest, next
-
-        queue.concurrency = helpers.config.get 'importer torrents per batch'
-        queue.drain = () ->
-          log.info "[Importer] Torrents Moved"
-          next_step(null, folders_locks)
-
-        for folder, torrents of folders_torrents
-          for torrent in torrents
-            queue.push torrent
+        queue =
+          for folder, torrents of folders_torrents
+            for torrent in torrents
               tmp : torrent
-              dest: "#{folder}/#{torrent.match(/[^/]+$/)[1]}"
+              dest: "#{folder}/#{torrent.match(/[^/]+$/)[0]}"
 
-        if not queue.started() # in case there's no Torrents or something
-          queue.drain()
+        async.mapLimit queue.flatten()
+          , helpers.config.get('importer torrents per batch')
+          , (item, next) ->
+            helpers.fs.move item.tmp, item.dest, (err) ->
+              next null, err ? null
+          , (err, res) ->
+            skipped = res.compact().length
+            moved   = res.length - skipped
+
+            log.info "[Importer] #{moved} Torrents moved (#{skipped} skipped)"
+            next_step null, folders_locks
 
       # Create lock files
       (folder_locks, next_step) ->
-        queue = async.queue (work, next) ->
-          helpers.fs.outputFile work.path, work.hash, next
+        queue =
+          for path, hash of folder_locks
+            path: path
+            hash: hash
 
-        queue.concurrency = helpers.config.get 'importer torrents per batch'
-        queue.drain = () ->
-          log.info "[Importer] User Locks created"
-          next_step()
+        async.mapLimit queue.flatten()
+          , helpers.config.get('importer torrents per batch')
+          , (item, next) ->
+            helpers.fs.outputFile item.path, item.hash, (err) ->
+              next null, err ? null
+          , (err, res) ->
+            skipped = res.compact().length
+            created = res.length - skipped
 
-        for path, hash of folder_locks
-          queue.push path: path, hash: hash
-
-        if not queue.started() # in case there's no locks to make
-          next_step()
+            log.info "[Importer] #{created} User Locks created (#{skipped} skipped)"
+            next_step()
     ]

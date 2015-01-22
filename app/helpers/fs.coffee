@@ -1,40 +1,38 @@
-module.exports = (helpers, log) ->
+module.exports = (helpers, cfg, log) ->
   async = require 'async'
   fs = require 'fs-extra'
 
   class FileSystemHelper
     @traverseDir = (dirpath, callback) ->
-      fs.readdir dirpath, (err, files) ->
-        return callback err if err
+      async.waterfall [
+        # List dirpaths items
+        (next_step) ->
+          fs.readdir dirpath, next_step
 
-        async.series [
-          # Retrieve all files' stats
-          (next_step) ->
-            async.map files
-              , (item, next_file) ->
-                fs.lstat "#{dirpath}/#{item}", (err, stat) ->
-                  if stat?
-                    stat.path = "#{dirpath}/#{item}"
-                  else
-                    stat = {}
-
-                  next_file err, stat
-              , next_step
-
-          # Create the files' paths array
-          (files_stats, next_step) ->
-            async.map files_stats
-              , (item, next_file) ->
-                if item.isFile()
-                  next_file null, item.path
+        # Retrieve all files' stats
+        (files, next_step) ->
+          async.map files
+            , (item, next_file) ->
+              fs.lstat "#{dirpath}/#{item}", (err, stat) ->
+                if stat?
+                  stat.path = "#{dirpath}/#{item}"
                 else
-                  @traverseDir item.path, next_file
-              , next_step
-        ], (err, files_paths) ->
-          if files_paths?
-            files_paths = files_paths.flatten()
+                  stat = {}
 
-          callback err, files_paths
+                next_file err, stat
+            , next_step
+
+        # Create the files' paths array
+        (files_stats, next_step) ->
+          async.map files_stats
+            , (item, next_file) ->
+              if item.isFile()
+                next_file null, item.path
+              else if item.isDirectory()
+                @traverseDir item.path, next_file
+            , next_step
+      ], (err, files_paths) ->
+        callback err, files_paths?.flatten()
 
     @traverseDirSync = (dirpath) ->
       files = []
