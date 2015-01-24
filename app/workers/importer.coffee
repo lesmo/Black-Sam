@@ -15,8 +15,15 @@ module.exports = (helpers, log) ->
       # Filter-out any unknown file types
       (filepaths, next_step) ->
         async.filter filepaths
-          , ((path, cb)      -> cb path.match /\.(torrent|magnet)$/i)
-          , ((new_filepaths) -> next_step null, new_filepaths)
+          , (path, cb) ->
+            cb path.match /\.(torrent|magnet)$/i
+          , (new_filepaths) ->
+            processing = new_filepaths.length
+            skipped    = filepaths.length - processing
+
+            log.info "[Importer] Processing #{processing} Torrents (skipped #{skipped})"
+
+            next_step null, new_filepaths
 
       # Convert Magnet Links to Torrent files
       (filepaths, next_step) ->
@@ -29,12 +36,13 @@ module.exports = (helpers, log) ->
             async.waterfall [
               # Retrieve Magnet Link from file
               (next) ->
-                line_reader.eachLine filepath, (line) ->
+                line_reader.eachLine filepath, (line, last, cb) ->
+                  cb false
                   next null, line
-                  return false
 
               # Find Torrent metadata
               (magnet, next) ->
+                log.info "[Importer] Finding metadata for #{magnet}"
                 helpers.torrent.get magnet, next
 
               # Convert to Torrent file Buffer
@@ -49,6 +57,7 @@ module.exports = (helpers, log) ->
 
               # Write to *.torrent file
               (info_hash, buffer, next) ->
+                log.info "[Importer] Writing #{info_hash.toUpperCase()}.torrent file"
                 new_filepath = filepath.replace /[^/]+$/, "#{info_hash.toUpperCase()}.torrent"
 
                 helpers.fs.outputFile new_filepath, buffer, (err) ->
