@@ -69,7 +69,7 @@ module.exports = (helpers, cfg, log) ->
       try
         torrent_id = parse_torrent torrent_id
       catch e
-        callback e
+        return callback e
 
       torrent = undefined
       timeout = setTimeout =>
