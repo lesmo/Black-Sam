@@ -37,3 +37,28 @@ module.exports = (cfg) ->
 
   # Path to the "logs" directory
   cfg.set 'logs path' , "#{__dirname}/../logs"
+
+  # List of Torrent Trackers to be used by BlackSam
+  cfg.set 'torrent trackers', [
+    'udp://open.demonii.com:1337'
+    'udp://11.rarbg.com'
+    'udp://tracker.yify-torrents.com'
+    'udp://tracker.prq.to'
+    'udp://tracker.publicbt.com:80'
+    'udp://tracker.yts.re'
+    'udp://exodus.desync.com:6969'
+    'http://inferno.demonoid.me:3414'
+    'udp://open.demonii.com:1337'
+    'http://exodus.desync.com:6969'
+    'http://tracker.ex.ua'
+    'udp://coppersurfer.tk:6969'
+    'udp://9.rarbg.com:2710'
+    'udp://ipv4.tracker.harry.lu:80'
+    'udp://12.rarbg.me:80'
+    'udp://tracker.token.ro:80'
+    'udp://10.rarbg.me:80'
+    'http://tracker.nwps.ws:6969'
+    'udp://tracker.openbittorrent.com:80'
+    'udp://tracker.istole.it:80'
+    'http://tracker1.wasabii.com.tw:6969'
+  ]
