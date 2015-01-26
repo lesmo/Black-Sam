@@ -42,7 +42,6 @@ module.exports = (helpers, log) ->
 
               # Find Torrent metadata
               (magnet, next) ->
-                log.info "[Importer] Finding metadata for #{magnet}"
                 helpers.torrent.get magnet, next
 
               # Convert to Torrent file Buffer
@@ -51,13 +50,12 @@ module.exports = (helpers, log) ->
                 helpers.torrent.remove torrent
 
                 try
-                  next null, parsed.infoHash, parse_torrent.toTorrentFile(parsed)
+                  async.nextTick -> next null, parsed.infoHash, parse_torrent.toTorrentFile(parsed)
                 catch e
-                  next e
+                  async.nextTick -> next e
 
               # Write to *.torrent file
               (info_hash, buffer, next) ->
-                log.info "[Importer] Writing #{info_hash.toUpperCase()}.torrent file"
                 new_filepath = filepath.replace /[^/]+$/, "#{info_hash.toUpperCase()}.torrent"
 
                 helpers.fs.outputFile new_filepath, buffer, (err) ->
@@ -67,8 +65,8 @@ module.exports = (helpers, log) ->
               (new_filepath, next) ->
                 helpers.fs.remove filepath, next
             ], (err, new_filepath) ->
-              if err?
-                next_file null, null # Ignore the file entirely
+              if err
+                next_file null, null
               else
                 next_file null, new_filepath
           , (err, new_filepaths) ->
@@ -94,13 +92,13 @@ module.exports = (helpers, log) ->
                 torrent = parse_torrent torrent_data
 
                 if torrent?
-                  next null, filepath.replace(/[^/]+$/, "#{torrent.infoHash.toUpperCase()}.torrent")
+                  async.nextTick -> next null, filepath.replace(/[^/]+$/, "#{torrent.infoHash.toUpperCase()}.torrent")
                 else
-                  next new Error()
+                  async.nextTick -> next new Error()
 
               (new_filepath, next) ->
                 if filepath is new_filepath
-                  next null, new_filepath
+                  async.nextTick -> next null, new_filepath
                 else
                   helpers.fs.move filepath, new_filepath, {clobber: true}, (err) ->
                     next err, new_filepath
@@ -115,14 +113,14 @@ module.exports = (helpers, log) ->
             converted = new_filepaths.length
             skipped   = filepaths.length - converted
 
-            log.info "[Importer] Renamed #{new_filepaths.length} Torrent Files to {hash}.torrent (skipped #{skipped})"
+            log.info "[Importer] Renamed #{converted} Torrent Files to {hash}.torrent (skipped #{skipped})"
 
             next_step err, new_filepaths
 
       # Calculate userdirs (and locks if required)
       (filepaths, next_step) ->
         if filepaths.length is 0
-          return next_step null, {}, {}
+          return async.nextTick -> next_step null, {}, {}
 
         files_per_dir = helpers.config.get 'importer random userdir torrents'
 
@@ -156,7 +154,7 @@ module.exports = (helpers, log) ->
               folders_torrents[random_userpath] =
                 filepaths[i * files_per_dir ..]
 
-        next_step null, folders_torrents, folders_locks
+        async.nextTick -> next_step null, folders_torrents, folders_locks
 
       # Move Torrent files
       (folders_torrents, folders_locks, next_step) ->

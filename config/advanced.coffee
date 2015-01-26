@@ -22,7 +22,7 @@ module.exports = (cfg) ->
 
   # Max number of errors a Worker is allowed before stopping
   # further attempts at reviving it.
-  cfg.set 'max worker fails', 100
+  cfg.set 'max worker fails', 7
 
   # This is the frequency with which each Worker is run after it
   # finishes it's job. This is not strict, timing starts when the

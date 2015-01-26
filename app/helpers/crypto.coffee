@@ -1,5 +1,5 @@
 module.exports = (helpers, cfg, log) ->
-  class crypto
+  class CryptoHelper
     @js = cryptojs = require('crypto-js')
 
     class @user
@@ -26,8 +26,8 @@ module.exports = (helpers, cfg, log) ->
           name_match = jsonpath.match /user\.(.+)\.json$/i
           json = fs.readJsonSync jsonpath, throws: false
 
-          if name_match?
-            json.displayName = name_match[1] if json?
+          if json? and name_match?
+            json.displayName = name_match[1]
 
         if json?.seedhash?.toUpperCase?
           json.seedhash = json.seedhash.toUpperCase()

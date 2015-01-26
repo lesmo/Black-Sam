@@ -1,5 +1,5 @@
 module.exports = (helpers, cfg, log) ->
-  class Errors
+  class ErrorsHelper
     constructor: (res) ->
       @res = res
       @fatal = []

@@ -3,7 +3,7 @@ module.exports = (helpers, cfg, log) ->
     Keeps an instance of the Search Index object and allows easy access to
     commonly used Search-related functions.
   ###
-  class search
+  class SearchHelper
     ### Search Index ###
     @index = require('search-index')
       indexPath: cfg.get 'sherlock path'

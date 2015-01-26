@@ -36,11 +36,11 @@ app.log.info "BlackSam controllers routing initialized"
 app.listen app.get('port'), ->
   app.log.info "BlackSam listening on port #{app.get 'port'} in #{app.settings.env} mode"
 
-app.log.info "BlackSam RAM for boot: %s", process.memoryUsage().rss.bytes()
-
 # Start Workers
 for w, worker of app.workers when app.enabled "run #{w} worker"
   if typeof worker is 'function'
     app.helpers.workers.startForever w, worker
   else if typeof worker.work is 'function'
     app.helpers.workers.startForever w, worker.work
+
+app.log.info "BlackSam RAM for boot: %s", process.memoryUsage().rss.bytes()

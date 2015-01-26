@@ -4,7 +4,7 @@ module.exports = (helpers, cfg, log) ->
   ###
     Facilitates calculation of URLs to different parts of BlackSam's controllers.
   ###
-  class url
+  class UrlHelper
     @hash_mask = (hash) ->
       hash = new Buffer hash, 'hex'
 
@@ -53,7 +53,7 @@ module.exports = (helpers, cfg, log) ->
     ### URL to a Search page ###
     @search = (query, page) ->
       "/search?q=#{query}" +
-        if page? > 1
+        if page > 1
           "&p=#{page}"
         else
           ''
