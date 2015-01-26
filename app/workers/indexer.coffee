@@ -24,11 +24,11 @@ module.exports = (helpers, log) ->
 
   return (finish) ->
     try
-      helpers.fs.ensureSync marianne_path
+      helpers.fs.ensureDirSync marianne_path
     catch e
       return finish e
 
-    user_dirs = fs.readdirSync marianne_path
+    user_dirs = helpers.fs.readdirSync marianne_path
 
     if user_dirs.length < 1
       log.info "[Indexer] Directory {marianne} contains no User Directories"
