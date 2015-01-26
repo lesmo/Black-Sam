@@ -1,10 +1,8 @@
 module.exports = (helpers, cfg, log) ->
-  fs = require 'fs-extra'
-
   ###
     Facilitates the interaction with User Accounts, their folders, hashing and validations.
   ###
-  class user
+  class UserHelper
     ###
       An alias for {helpers.crypto.user.getHash}
     ###
@@ -24,7 +22,8 @@ module.exports = (helpers, cfg, log) ->
       Checks if a given {hash} could be a valid User Hash.
     ###
     @validHash = (hash) ->
-      return undefined if not hash?
+      if not hash?
+        return undefined
 
       regex_match = hash.match /^(1\-)?([0-9A-F]{40})$/i
 
@@ -59,24 +58,30 @@ module.exports = (helpers, cfg, log) ->
       Creates a new User Account with the given User Hash or User Name and
       Password combination.
     ###
-    @create = (username, password, callback) ->
-      if callback
-        userhash = @getHash username, password
-      else if userhash = @validHash username
-        callback = password
+    @create = (credentials..., callback) ->
+      if credentials.length < 1 or credentials.length > 2
+        return async.nextTick ->
+          callback new Error('blacksam.generic.invalidArguments')
+
+      if credentials.length is 1
+        userhash = @getHash credentials[0], credentials[1]
       else
-        return callback new Error('Invalid User Hash')
+        userhash = credentials[0]
+
+      if not userhash?
+        return async.nextTick ->
+          callback new Error('blacksam.generic.invalidArguments')
 
       if @exists userhash
-        return callback new Error('User Hash already exist')
+        callback new Error('blacksam.user.create.exists')
       else
         fs.mkdirp @getPath(userhash), (err) ->
           if err
-            log.error "Create User Folder [#{userhash}] failed", err
-            return callback err
+            log.error "{helpers.user} User Folder [#{userhash}] creation failed", err
           else
-            log.info "User Folder [#{userhash}] created"
-            return callback null, userhash
+            log.info "{helpers.user} User Folder [#{userhash}] created"
+
+          callback err, userhash
 
     @getDisplayName = (userhash) ->
       userpath = @getLocalPath userhash
@@ -95,22 +100,23 @@ module.exports = (helpers, cfg, log) ->
       userpath = @getLocalPath userhash
 
       if not userpath?
-        return undefined
+        return displayName: 'invalid'
 
       userhash  = @validHash(userhash).from(2)
-      anonymous =
-        displayName: 'anonymous'
 
-      for file in fs.readdirSync userpath when display_name = file.match /^user\.(.+)\.json$/i
-        userjson = fs.readJSONSync "#{userpath}/#{file}"
+      for file in helpers.fs.readdirSync(userpath) when display_name = file.match(/^user\.(.+)\.json$/i)
+        userjson = helpers.fs.readJSONSync "#{userpath}/#{file}"
 
         if not userjson?
           continue
 
         userjson.displayName = display_name[1]
 
-        delete userjson.seedhash
-        return userjson
+        if helpers.crypto.user.validJson userhash, userjson
+          delete userjson.seedhash
+          return userjson
+        else
+          return displayName: 'invalid'
 
       # If we got to here, no user json file was found
-      return anonymous
+      return displayName: 'anonymous'
