@@ -46,13 +46,16 @@ module.exports = (helpers, log) ->
 
               # Convert to Torrent file Buffer
               (torrent, next) ->
-                parsed = torrent.parsedTorrent
+                parsed_torrent = torrent.parsedTorrent
                 helpers.torrent.remove torrent
 
-                try
-                  async.nextTick -> next null, parsed.infoHash, parse_torrent.toTorrentFile(parsed)
-                catch e
-                  async.nextTick -> next e
+                if parsed_torrent?
+                  try
+                    next null, parsed_torrent.infoHash, parse_torrent.toTorrentFile(parsed_torrent)
+                  catch e
+                    next e
+                else
+                  next new Error('blacksam.importer.invalidTorrent')
 
               # Write to *.torrent file
               (info_hash, buffer, next) ->
