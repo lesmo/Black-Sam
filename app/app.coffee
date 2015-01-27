@@ -1,7 +1,6 @@
 ###
   This is the very first thing loaded for BlackSam. This instantiates Express, initializes
-  the vessel with Controllers, Helpers and Workers through the call to other files that
-  do each of those jobs.
+  the vessel with Controllers and Helpers through the call to other files.
 
   So everything stays tidy and neat. As a Ship's Deck must be.
 ###
@@ -13,34 +12,30 @@ blacksam =
   middleware: require "#{__dirname}/middleware"
   routes: require "#{__dirname}/routes"
 
-# Create the App (obviously)
-app = express()
+# Create the App (obviously) and initialize it
+blacksam.init app = express(), 'controllers', (err) ->
+  if err?
+    return app.log.error "Error occurred during the load of BlackSam core: %s", (err?.message ? 'unknown'), err
 
-# Load Controllers, Helpers and Workers
-blacksam.init app
-app.log.info "BlackSam controllers, helpers and settings loaded"
+  # Remove the Workers helper from the context
+  if app.helpers.worker?
+    delete app.helpers.workers
 
-# Load Middleware
-blacksam.middleware app
-app.log.info "BlackSam middleware attached"
+  app.log.info "BlackSam settings, helpers and controllers loaded"
 
-for h, helper of app.helpers when helper?.middleware?
-  app.use helper.middleware
-  app.log.info "Helper middleware {#{h}.middleware()} attached"
+  # Load Middleware
+  blacksam.middleware app
+  app.log.info "BlackSam middleware attached"
 
-# Load routing
-blacksam.routes app, express
-app.log.info "BlackSam controllers routing initialized"
+  for h, helper of app.helpers when helper?.middleware?
+    app.use helper.middleware
+    app.log.info "Helper middleware {#{h}.middleware()} attached"
 
-# Start the server
-app.listen app.get('port'), ->
-  app.log.info "BlackSam listening on port #{app.get 'port'} in #{app.settings.env} mode"
+  # Load routing
+  blacksam.routes app, express
+  app.log.info "BlackSam controllers routing initialized"
 
-# Start Workers
-for w, worker of app.workers when app.enabled "run #{w} worker"
-  if typeof worker is 'function'
-    app.helpers.workers.startForever w, worker
-  else if typeof worker.work is 'function'
-    app.helpers.workers.startForever w, worker.work
-
-app.log.info "BlackSam RAM for boot: %s", process.memoryUsage().rss.bytes()
+  # Start the server
+  app.listen app.get('port'), ->
+    app.log.info "BlackSam listening on port #{app.get 'port'} in #{app.settings.env} mode"
+    app.log.info "BlackSam RAM for boot: %s", process.memoryUsage().rss.bytes()
