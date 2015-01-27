@@ -2,103 +2,129 @@
   Load and initialize Helpers, Controllers and Worker. Nothing is, and never must be, run
   on the classes in this file.
 ###
+module.exports = (app, components..., callback) ->
+  # People will be people... assert there's shit to do first
+  if components?.length < 1
+    return callback new Error('blacksam.core.noComponents')
+  else
+    components = components.flatten()
 
-module.exports = (app) ->
-  ### Setup the autoloader ###
+  # Setup the auto-loader
   fs      = require 'fs'
   path    = require 'path'
+  async   = require 'async'
   logging = require "#{__dirname}/logging"
 
-  # Defined AFTER config is loaded
-  logger = null
+  autoload = (dir, obj = {}, args..., callback) ->
+    if args?.length > 0
+      args = args.flatten()
 
-  autoload = (dir, obj, logcat, args) ->
-    if arguments.length is 1
-      obj = {}
-    else if arguments.length is 3
-      args = logcat
-      logcat = undefined
+    async.waterfall [
+      # Read files in directory
+      (next_step) ->
+        fs.readdir dir, next_step
 
-    for file in fs.readdirSync dir
-      filepath = "#{dir}/#{file}"
-      stat = fs.lstatSync filepath
-      cls  = file.match(/([0-9a-z]+)(\.[0-9a-z]+)?/i)[1]
+      # Filter out non js/coffee files
+      (files, next_step) ->
+        async.filter files
+        , (file, next_file) ->
+          fs.lstat "#{dir}/#{file}", (err, file_stats) ->
+            if err?
+              next_file false
+            else if not file_stats.isFile()
+              next_file not not file.match /\.(coffee|js)$/i
+            else
+              next_file false
+        , next_step
 
-      if not stat.isFile() and not obj[cls]?
-        continue
+      # Load the files' and call their callback
+      (files, next_step) ->
+        async.each files
+          , (file, next_file) ->
+            class_name = file.match(/(.+)\.(coffee|js)$/i)[1]
 
-      req = require filepath
-      continue if typeof req isnt 'function'
+            # Avoid over-writing already loaded classes
+            if obj[class_name]?
+              return next_file new Error('blacksam.core.memoryOverwrite')
 
-      if args?
-        if not Array.isArray args
-          args = [args]
-      else
-        args = []
+            file_path = "#{dir}/#{file}"
+            required  = require(file_path)
 
-      if logcat? and typeof logger is 'function'
-        args.add logger("#{logcat}.#{cls}")
+            if not required?
+              return next_file new Error('blacksam.core.loadError')
 
-      obj[cls] = req.apply null, args
-      app.log?.info "Loaded {#{cls}} from #{filepath}"
+            if typeof required is 'function'
+              obj[class_name] = required.apply null, args
+            else
+              obj[class_name] = required
 
-  readonly_config = {
+            app.log?.info "Loaded {#{class_name}} from #{file_path}"
+            next_file()
+          , next_step
+    ], callback
+
+  readonly_config =
     get: (k) -> app.get k
     enabled: (k) -> app.enabled k
     disabled: (k) -> app.disabled k
-  }
 
-  ### Load Settings ###
-  autoload "#{__dirname}/../config", {}, {
+  write_config = Object.merge readonly_config,
     set: (k, v) -> app.set k, v
     enable: (k) -> app.enable k
     disable: (k) -> app.disable k
-  }
 
-  # Generate awesome random secret if retarded operator didn't set one
-  if not app.get('session secret')? or app.get('session secret') is 'REPLACE THIS BEFORE STARTNG'
-    app.set 'session secret', (Math.random().toString() + '056127539128').slice(2, 20)
+  async.waterfall [
+    # Load settings
+    (next_step) ->
+      autoload "#{__dirname}/../config", null, write_config, next_step
 
-  # Make all paths absolute
-  for path_config in ['marianne', 'sultanna', 'sherlock', 'logs']
-    app.set "#{path_config} path", path.resolve(app.get "#{path_config} path")
+    # Tweak settings
+    (next_step) ->
+      # Generate awesome random secret if retarded operator didn't set one
+      if not app.get('session secret')? or app.get('session secret') is 'REPLACE THIS BEFORE STARTNG'
+        app.set 'session secret', (Math.random().toString() + '056127539128').slice(2, 20)
 
-  ### Setup logging ###
-  logger  = logging readonly_config
-  app.log = logger('blacksam-core')
+      # Make all paths absolute
+      for path_config in ['marianne', 'sultanna', 'sherlock', 'logs']
+        app.set "#{path_config} path", path.resolve(app.get "#{path_config} path")
 
-  if app.disabled 'log to file'
-    app.log.info "Logging to file is disabled, printing logs to console"
+      next_step()
 
-  ### Setup the Express Framework ###
-  port = app.get('http port') || process.env.PORT || 3000
-  if process.argv.indexOf('-p') >= 0
-    port = process.argv[process.argv.indexOf('-p') + 1]
+    # Prepare logging
+    (next_step) ->
+      logger  = logging readonly_config
+      app.log = logger('blacksam-core')
 
-  app.set 'port', port
-  app.set 'views', "#{__dirname}/views"
-  app.set 'view engine', 'jade'
+      if app.disabled 'log to file'
+        app.log.info "Logging to file is disabled, only printing logs to console"
 
-  ### Setup BlackSam Components ###
-  app.helpers = app.locals.helpers = {}
-  app.controllers = {}
-  app.workers = {}
+      port = app.get('http port') || process.env.PORT || 3000
+      if process.argv.indexOf('-p') >= 0
+        port = process.argv[process.argv.indexOf('-p') + 1]
 
-  # Helpers
-  autoload "#{__dirname}/helpers"
-    , app.helpers
-    , 'blacksam-helper'
-    , [app.helpers, readonly_config]
-  app.helpers.config = readonly_config
+      app.set 'port', port
+      app.set 'views', "#{__dirname}/views"
+      app.set 'view engine', 'jade'
 
-  # Controllers
-  autoload "#{__dirname}/controllers"
-    , app.controllers
-    , 'blacksam-controller'
-    , app.helpers
+      next_step logger
 
-  # Workers
-  autoload "#{__dirname}/workers"
-    , app.workers
-    , 'blacksam-worker'
-    , app.helpers
+    # Load the Helpers
+    (logger, next_step) ->
+      autoload "#{__dirname}/helpers"
+        , app.helpers = {}
+        , [app.helpers, readonly_config, logger 'blacksam-helpers']
+        , (err) ->
+          next_step err, logger
+
+    # Load the requested components
+    (logger, next_step) ->
+      components.remove 'helpers'
+
+      async.each components
+        , (component, next_component) ->
+          autoload "#{__dirname}/#{component}"
+            , app[component] ? app[component] = {}
+            , [app.helpers, readonly_config, logger "blacksam-#{component}"]
+            , next_component
+        , next_step
+  ], callback

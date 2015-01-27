@@ -1,6 +1,8 @@
 {
   "name": "BlackSam",
-  "version": "0.0.1",
+  "version": "0.0.2",
+  "description": "",
+  "author": "Sinuhe Coronel Salinas <lesmo@lesmo.com.mx>",
   "dependencies": {
     "async": "^0.9.0",
     "base32": "0.0.6",
@@ -31,11 +33,10 @@
     "webtorrent": "^0.21.0",
     "winston": "^0.8.3"
   },
-  "scripts": {
-    "start": "server.js"
-  },
+  "main": "blacksam-web.js",
   "engines": {
     "node": "0.10.25",
     "npm": "1.1.x"
-  }
+  },
+  "license": "MIT"
 }

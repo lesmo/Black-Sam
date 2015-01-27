@@ -1,18 +1,26 @@
 {
   "name": "BlackSam",
   "version": "0.0.0",
-  "homepage": "https://github.com/lesmo/BlackSam",
+  "description": "An open-source Node.js, almost database-less, torrent search engine.",
   "authors": [
     "Sinuhé Coronel S. <lesmo@lesmo.com.mx>"
   ],
   "license": "MIT",
-  "private": true,
+  "homepage": "https://github.com/lesmo/BlackSam",
+  "repository": "https://github.com/lesmo/BlackSam.git",
+  "bugs": {
+    "url": "https://github.com/lesmo/BlackSam/issues",
+    "email": "lesmo@lesmo.com.mx"
+  },
   "ignore": [
     "**/.*",
     "node_modules",
     "bower_components",
     "test",
-    "tests"
+    "tests",
+    "marianne",
+    "sultanna",
+    "sherlock"
   ],
   "dependencies": {
     "jquery": "~2.1.3",

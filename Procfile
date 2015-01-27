@@ -1,1 +1,2 @@
-web: node server.js
+web: node blacksam-web.js
+worker: node blacksam-workers.js
