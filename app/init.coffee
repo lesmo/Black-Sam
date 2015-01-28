@@ -31,11 +31,12 @@ module.exports = (app, components..., callback) ->
           fs.lstat "#{dir}/#{file}", (err, file_stats) ->
             if err?
               next_file false
-            else if not file_stats.isFile()
-              next_file not not file.match /\.(coffee|js)$/i
+            else if file_stats.isFile()
+              next_file file.match /\.(coffee|js)$/i
             else
               next_file false
-        , next_step
+        , (files) ->
+          next_step null, files
 
       # Load the files' and call their callback
       (files, next_step) ->
@@ -58,7 +59,7 @@ module.exports = (app, components..., callback) ->
             else
               obj[class_name] = required
 
-            app.log?.info "Loaded {#{class_name}} from #{file_path}"
+            app.log?.info "Loaded {%s}", class_name, file_path: file_path
             next_file()
           , next_step
     ], callback
@@ -88,6 +89,16 @@ module.exports = (app, components..., callback) ->
       for path_config in ['marianne', 'sultanna', 'sherlock', 'logs']
         app.set "#{path_config} path", path.resolve(app.get "#{path_config} path")
 
+      # Get port based on overriding precedence
+      port = app.get('http port') or process.env.PORT or 3000
+      if process.argv.indexOf('-p') >= 0
+        port = process.argv[process.argv.indexOf('-p') + 1]
+
+      # Set stuff for Express.js
+      app.set 'port', port
+      app.set 'views', "#{__dirname}/views"
+      app.set 'view engine', 'jade'
+
       next_step()
 
     # Prepare logging
@@ -98,18 +109,13 @@ module.exports = (app, components..., callback) ->
       if app.disabled 'log to file'
         app.log.info "Logging to file is disabled, only printing logs to console"
 
-      port = app.get('http port') || process.env.PORT || 3000
-      if process.argv.indexOf('-p') >= 0
-        port = process.argv[process.argv.indexOf('-p') + 1]
-
-      app.set 'port', port
-      app.set 'views', "#{__dirname}/views"
-      app.set 'view engine', 'jade'
-
-      next_step logger
+      app.log.profile 'Components loading'
+      next_step null, logger
 
     # Load the Helpers
     (logger, next_step) ->
+      app.log.info 'Loading helpers...'
+
       autoload "#{__dirname}/helpers"
         , app.helpers = {}
         , [app.helpers, readonly_config, logger 'blacksam-helpers']
@@ -122,9 +128,16 @@ module.exports = (app, components..., callback) ->
 
       async.each components
         , (component, next_component) ->
+          app.log.info "Loading #{component}..."
+
           autoload "#{__dirname}/#{component}"
             , app[component] ? app[component] = {}
             , [app.helpers, readonly_config, logger "blacksam-#{component}"]
             , next_component
         , next_step
+
+    # Finalize core-loading profiling
+    (next_step) ->
+      app.log.profile 'Components loading'
+      next_step()
   ], callback

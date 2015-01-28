@@ -1,16 +1,16 @@
-module.exports = (helpers, log) ->
+module.exports = (helpers, cfg, log) ->
   parse_torrent = require 'parse-torrent'
   line_reader = require 'line-reader'
   async = require 'async'
 
-  if not helpers.config.get('importer userdir')? and helpers.config.get('importer random userdir torrents') < 1
+  if not cfg.get('importer userdir')? and cfg.get('importer random userdir torrents') < 1
     log.error 'Importer Worker cannot work with both [userdir] and [random userdir] disabled'
     return undefined
   else
     return async.apply async.waterfall, [
       # Retrieve all paths inside {sultanna path}/import folder
       (next_step) ->
-        helpers.fs.traverseDir "#{helpers.config.get 'sultanna path'}/import", next_step
+        helpers.fs.traverseDir "#{cfg.get 'sultanna path'}/import", next_step
 
       # Filter-out any unknown file types
       (filepaths, next_step) ->
@@ -18,13 +18,13 @@ module.exports = (helpers, log) ->
           , (path, cb) ->
             cb path.match /\.(torrent|magnet)$/i
           , (new_filepaths) ->
-            log.info "[Importer] Processing #{new_filepaths.length} Torrents"
+            log.info "Processing #{new_filepaths.length} Torrents"
             next_step null, new_filepaths
 
       # Convert Magnet Links to Torrent files
       (filepaths, next_step) ->
         async.mapLimit filepaths
-          , helpers.config.get('importer torrents per batch')
+          , cfg.get('importer torrents per batch')
           , (filepath, next_file) ->
             if not filepath.match /\.magnet$/i
               return next_file null, filepath
@@ -75,14 +75,14 @@ module.exports = (helpers, log) ->
             converted = (p for p in new_filepaths when p.match /\.magnet$/i).length
             skipped   = (p for p in filepaths when p.match /\.magnet$/i).length - converted
 
-            log.info "[Importer] Converted #{converted} Magnet Links to Torrent Files (skipped #{skipped})"
+            log.info "Converted #{converted} Magnet Links to Torrent Files (skipped #{skipped})"
 
             next_step err, new_filepaths
 
       # Rename Torrent files to {infoHash}.torrent
       (filepaths, next_step) ->
         async.mapLimit filepaths
-          , helpers.config.get('importer torrents per batch')
+          , cfg.get('importer torrents per batch')
           , (filepath, next_file) ->
             async.waterfall [
               (next) ->
@@ -113,7 +113,7 @@ module.exports = (helpers, log) ->
             converted = new_filepaths.length
             skipped   = filepaths.length - converted
 
-            log.info "[Importer] Renamed #{converted} Torrent Files to {hash}.torrent (skipped #{skipped})"
+            log.info "Renamed #{converted} Torrent Files to {hash}.torrent (skipped #{skipped})"
 
             next_step err, new_filepaths
 
@@ -122,15 +122,15 @@ module.exports = (helpers, log) ->
         if filepaths.length is 0
           return async.nextTick -> next_step null, {}, {}
 
-        files_per_dir = helpers.config.get 'importer random userdir torrents'
+        files_per_dir = cfg.get 'importer random userdir torrents'
 
         folders_torrents = {}
         folders_locks = {}
 
         if files_per_dir is 0
-          folders_torrents[helpers.user.validHash helpers.config.get 'importer userdir'] = filepaths
+          folders_torrents[helpers.user.validHash cfg.get 'importer userdir'] = filepaths
         else
-          userdirs = filepaths.length / helpers.config.get 'importer random userdir torrents'
+          userdirs = filepaths.length / cfg.get 'importer random userdir torrents'
           userdirs = Math.floor(userdirs) + 1
 
           for i in [0...userdirs]
@@ -143,7 +143,7 @@ module.exports = (helpers, log) ->
             random_userhash = helpers.user.getHash random_username + random_password
             random_userpath = helpers.user.getPath random_userhash
 
-            if helpers.config.enabled 'importer lock random userdir'
+            if cfg.enabled 'importer lock random userdir'
               folders_locks["#{random_userpath}/user.lock"] =
                 helpers.crypto.user.getLockHash random_username, random_password
 
@@ -165,7 +165,7 @@ module.exports = (helpers, log) ->
               dest: "#{folder}/#{torrent.match(/[^/]+$/)[0]}"
 
         async.mapLimit queue.flatten()
-          , helpers.config.get('importer torrents per batch')
+          , cfg.get('importer torrents per batch')
           , (item, next) ->
             helpers.fs.move item.tmp, item.dest, (err) ->
               next null, err ? null
@@ -173,7 +173,7 @@ module.exports = (helpers, log) ->
             skipped = res.compact().length
             moved   = res.length - skipped
 
-            log.info "[Importer] #{moved} Torrents moved (#{skipped} skipped)"
+            log.info "#{moved} Torrents moved (#{skipped} skipped)"
             next_step null, folders_locks
 
       # Create lock files
@@ -184,7 +184,7 @@ module.exports = (helpers, log) ->
             hash: hash
 
         async.mapLimit queue.flatten()
-          , helpers.config.get('importer torrents per batch')
+          , cfg.get('importer torrents per batch')
           , (item, next) ->
             helpers.fs.outputFile item.path, item.hash, (err) ->
               next null, err ? null
@@ -192,6 +192,6 @@ module.exports = (helpers, log) ->
             skipped = res.compact().length
             created = res.length - skipped
 
-            log.info "[Importer] #{created} User Locks created (#{skipped} skipped)"
+            log.info "#{created} User Locks created (#{skipped} skipped)"
             next_step()
     ]

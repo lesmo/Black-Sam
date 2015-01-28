@@ -3,15 +3,15 @@
   make sure they're properly Indexed.
 ###
 
-module.exports = (helpers, log) ->
+module.exports = (helpers, cfg, log) ->
   parse_torrent = require 'parse-torrent'
   async = require 'async'
   path = require 'path'
 
-  marianne_path = helpers.config.get 'marianne path'
+  marianne_path = cfg.get 'marianne path'
 
-  conflict_solution = helpers.config.get 'torrent conflict solution'
-  conflict_rename_ext = helpers.config.get 'torrent conflict extension'
+  conflict_solution = cfg.get 'torrent conflict solution'
+  conflict_rename_ext = cfg.get 'torrent conflict extension'
 
   if conflict_solution is 'delete'
     conflict_solution = (torrent_path) ->
@@ -42,7 +42,7 @@ module.exports = (helpers, log) ->
       torrents_ignored: 0
 
     async.eachLimit user_dirs
-      , helpers.config.get('torrent index worker batch')
+      , cfg.get('torrent index worker batch')
       , (user_hash, next_user) ->
         async.waterfall [
           # Check if it's a valid User Hash dir
@@ -99,7 +99,7 @@ module.exports = (helpers, log) ->
             log.info "[Indexer] Processing User Directory [#{user_hash}] (#{file_paths.length} files) ..."
 
             async.mapLimit file_paths
-              , helpers.config.get('torrent index worker batch')
+              , cfg.get('torrent index worker batch')
               , (torrent_path, next_file) ->
                 async.waterfall [
                   # Calculate categorization of Torrent
@@ -118,7 +118,7 @@ module.exports = (helpers, log) ->
                     category    = category.toLowerCase()
                     subcategory = category.toLowerCase()
 
-                    valid_categorization = helpers.config.get('categories')
+                    valid_categorization = cfg.get('categories')
 
                     if not valid_categorization[category]?
                       return next_index_step new Error('blacksam.indexer.invalidTorrentCategorization')
@@ -195,7 +195,7 @@ module.exports = (helpers, log) ->
                       (torrent, next) ->
                         torrent_last_accessed = new Date torrent.accessed
                         torrent_last_updated  = new Date torrent.updated
-                        time_threshold = helpers.config.get 'torrent update time threshold'
+                        time_threshold = cfg.get 'torrent update time threshold'
 
                         if torrent_last_accessed > torrent_last_updated.advance time_threshold
                           next null, torrent
