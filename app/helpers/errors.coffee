@@ -43,5 +43,5 @@ module.exports = (helpers, cfg, log) ->
     addValidationClient: @addValidation
 
   return middleware: (req, res, next) ->
-    res.locals.errors = res.errors = new Errors(res)
+    res.locals.errors = res.errors = new ErrorsHelper(res)
     next()

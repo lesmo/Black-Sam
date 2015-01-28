@@ -11,13 +11,14 @@ module.exports = (helpers, log) ->
   marianne_path = helpers.config.get 'marianne path'
 
   conflict_solution = helpers.config.get 'torrent conflict solution'
+  conflict_rename_ext = helpers.config.get 'torrent conflict extension'
 
   if conflict_solution is 'delete'
     conflict_solution = (torrent_path) ->
       async.apply helpers.fs.remove, torrent_path
   else if conflict_solution is 'rename'
     conflict_solution = (torrent_path) ->
-      async.apply helpers.fs.move, torrent_path, "#{torrent_path}.#{renamed_path}"
+      async.apply helpers.fs.move, torrent_path, "#{torrent_path}.#{conflict_rename_ext}"
   else
     log.error "[Indexer] Invalid conflict solution {#{conflict_solution}}: dying"
     return undefined
@@ -109,7 +110,7 @@ module.exports = (helpers, log) ->
                     [..., category, subcategory, nil] = torrent_subpath.split path.sep
 
                     if not subcategory?
-                      return next_index_step new Error('blacksam.indexer.invalidTorrentCategorization')
+                      category = 'others'
 
                     if not category?
                       [category, subcategory] = [subcategory, '']
@@ -246,7 +247,7 @@ module.exports = (helpers, log) ->
             stats.torrents_processed +=
               processed = torrents.compact().length
             stats.torrents_skipped +=
-              skipped = torrents.length() - processed
+              skipped = torrents.length - processed
           else
             processed = skipped = 0
 

@@ -37,7 +37,7 @@ block body
                   span.caret
                   span.sr-only Toggle search category
                 ul.dropdown-menu#search-categories
-                  each subcategories, category in helpers.config.get('categories')
+                  each subcategories, category in config.get('categories')
                     li
                       a(data-category=category)= category.titleize()
           .mastfoot

@@ -53,7 +53,7 @@ block content
 
                            p.text-center
                               select#selectCategory(name='torrent_category', required)
-                                 each subcategories, category in helpers.config.get('categories')
+                                 each subcategories, category in config.get('categories')
                                     optgroup(label=category.titleize())
                                        each subcategory in subcategories
                                           option(value=category + '#' + subcategory)= subcategory.titleize()

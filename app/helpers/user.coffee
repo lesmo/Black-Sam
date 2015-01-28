@@ -77,9 +77,9 @@ module.exports = (helpers, cfg, log) ->
       else
         fs.mkdirp @getPath(userhash), (err) ->
           if err
-            log.error "{helpers.user} User Folder [#{userhash}] creation failed", err
+            log.error "User Folder [#{userhash}] creation failed", err
           else
-            log.info "{helpers.user} User Folder [#{userhash}] created"
+            log.info "User Folder [#{userhash}] created"
 
           callback err, userhash
 

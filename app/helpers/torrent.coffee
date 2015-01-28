@@ -5,7 +5,7 @@ module.exports = (helpers, cfg, log) ->
   path = require 'path'
 
   Timeout = require('node-timeout')
-  Tracker = require 'bittorrent-tracker/Client'
+  Tracker = require('bittorrent-tracker').Client
 
   torrent_timeout = Timeout cfg.get('torrent process timeout'), err: new Error('blacksam.torrent.processTimeout')
 
@@ -14,7 +14,7 @@ module.exports = (helpers, cfg, log) ->
   ###
   class TorrentHelper
     ### WebTorrent Client Instance ###
-    @client = new require('webtorrent')()
+    @client = new require('webtorrent') tracker: cfg.get 'torrent trackers'
 
     ###
       Validates that a given String is a (possibly) valid InfoHash.
@@ -63,10 +63,11 @@ module.exports = (helpers, cfg, log) ->
         hash
 
     @remove = (torrent_id) ->
-      return if not torrent?
+      torrent = @client.get torrent_id
 
-      torrent.destroy()
-      @client.remove torrent.infoHash ? torrent
+      if torrent?
+        torrent.destroy()
+        @client.remove torrent.infoHash ? torrent
 
     ###
       Find a Torrent in a Tracker, or via DHT, and return it in a callback.
@@ -84,11 +85,13 @@ module.exports = (helpers, cfg, log) ->
 
       @client.add torrent_id, {tmp: cfg.get 'sultanna path'}, torrent_timeout (torrent) =>
         if torrent is 'blacksam.torrent.processTimeout' or not torrent?
-          log.warn "{helpers.torrent} Metadata retrieval for Torrent [#{torrent?.infoHash or 'removed'}] timed-out"
+          log.warn "Metadata retrieval for Torrent [#{torrent?.infoHash or 'removed'}] timed-out"
           @remove torrent
 
-          if torrent?
-            callback new Error(torrent)
+          if torrent is 'blacksam.torrent.processTimeout'
+            callback new Error('blacksam.torrent.processTimeout')
+          else
+            callback new Error('blacksam.torrent.notFound')
         else
           callback null, torrent
 

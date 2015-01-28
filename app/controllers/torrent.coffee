@@ -1,4 +1,4 @@
-module.exports = (helpers, log) ->
+module.exports = (helpers, cfg, log) ->
   parse_torrent = require 'parse-torrent'
   async         = require 'async'
   multer        = require 'multer'
@@ -7,10 +7,10 @@ module.exports = (helpers, log) ->
   class TorrentController
     @routes = (router) ->
       router.use multer {
-        dest: helpers.config.get 'sultanna_dir',
+        dest: cfg.get 'sultanna_dir',
         limits:
           files: 2
-          fileSize: helpers.config.get 'max file size'
+          fileSize: cfg.get 'max file size'
       }
 
       router.param 'id', (req, res, next, id) ->
@@ -48,9 +48,9 @@ module.exports = (helpers, log) ->
 
         category = category?[0]
 
-        if not helpers.config.get('categories')[category]?
+        if not cfg.get('categories')[category]?
           res.errors.addValidation 'torrent_category'
-        else if not helpers.config.get('categories')[category].find(subcategory)?
+        else if not cfg.get('categories')[category].find(subcategory)?
           res.errors.addValidation 'torrent_category', 'Invalid subcategory ' + subcategory
 
         if req.files?.torrent_file?
@@ -95,11 +95,11 @@ module.exports = (helpers, log) ->
           (callback) ->
             fs.stat "#{helpers.torrent.getPath torrent}.torrent", callback
         ], (err, files) ->
-          if err or not files[1]?.isFile() or files[1].size > helpers.config.get('max file size')
+          if err or not files[1]?.isFile() or files[1].size > cfg.get('max file size')
             log.warn err?.message ? "[#{torrent_id}.torrent] is not a file, or too large. Deleting from Search Index..."
             helpers.search.index.del torrent_id, next
           else
-            if files[0]?.size < helpers.config.get('max file size')
+            if files[0]?.size < cfg.get('max file size')
               torrent.description = fs.readFileSync("#{helpers.torrent.getPath torrent}.md").toString()
 
             res.render 'torrent/torrent', torrent: torrent
@@ -116,7 +116,7 @@ module.exports = (helpers, log) ->
         torrent_store_path = helpers.torrent.getLocalPath torrent
 
         fs.stat "#{torrent_store_path}.torrent", (err, file) ->
-          if err or not file.isFile() or file.size > helpers.config.get('max file size')
+          if err or not file.isFile() or file.size > cfg.get('max file size')
             helpers.search.index.del torrent.id, (err) ->
               log.warn err or "[#{torrent_id}.torrent] is not a file, or too large. Deleted from Search Index."
               next()

@@ -29,7 +29,7 @@ module.exports = (helpers, cfg, log) ->
               if item.isFile()
                 next_file null, item.path
               else if item.isDirectory()
-                @traverseDir item.path, next_file
+                helpers.fs.traverseDir item.path, next_file
             , next_step
       ], (err, files_paths) ->
         callback err, files_paths?.flatten()

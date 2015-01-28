@@ -33,14 +33,14 @@ module.exports = (helpers, cfg, log) ->
 
             if err
               next err
-            else if helpers.config.get "worker #{name} timespan"
-              setTimeout next, helpers.config.get "worker #{name} timespan"
+            else if cfg.get "worker #{name} timespan"
+              setTimeout next, cfg.get "worker #{name} timespan"
             else
-              setTimeout next, helpers.config.get 'worker timespan'
+              setTimeout next, cfg.get 'worker timespan'
       , (err) ->
         if cfg.enabled 'die on max worker fails'
-          log.error "Worker {#{name}} failed max number of times, killing BlackSam"
+          log.error "Worker {#{name}} failed max number of times, killing BlackSam", err
           process.exit 1
         else
-          log.error "Worker {#{name}} failed max number of times, won't be restarted"
+          log.error "Worker {#{name}} failed max number of times, won't be restarted", err
           fail_callback? err

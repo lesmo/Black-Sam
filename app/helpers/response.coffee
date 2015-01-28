@@ -1,4 +1,4 @@
-module.exports = () ->
+module.exports = (helpers, cfg) ->
   ###
     Pre-process response output.
   ###
@@ -20,5 +20,7 @@ module.exports = () ->
           | playstation
           | xbox
         ) ///i
+
+      res.locals.config = cfg
 
       next()

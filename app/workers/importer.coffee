@@ -18,11 +18,7 @@ module.exports = (helpers, log) ->
           , (path, cb) ->
             cb path.match /\.(torrent|magnet)$/i
           , (new_filepaths) ->
-            processing = new_filepaths.length
-            skipped    = filepaths.length - processing
-
-            log.info "[Importer] Processing #{processing} Torrents (skipped #{skipped})"
-
+            log.info "[Importer] Processing #{new_filepaths.length} Torrents"
             next_step null, new_filepaths
 
       # Convert Magnet Links to Torrent files
@@ -66,7 +62,8 @@ module.exports = (helpers, log) ->
 
               # Delete *.magnet file
               (new_filepath, next) ->
-                helpers.fs.remove filepath, next
+                helpers.fs.remove filepath, (err) ->
+                  next null, new_filepath
             ], (err, new_filepath) ->
               if err
                 next_file null, null
