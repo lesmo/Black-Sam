@@ -52,8 +52,8 @@ module.exports = (app, components..., callback) ->
               return next_file new Error('blacksam.core.loadError')
 
             if typeof required is 'function'
-              args.push logger?.category class_name
-              obj[class_name] = required.apply null, args
+              obj[class_name] =
+                required.apply null, args.include(logger?.category class_name)
             else
               obj[class_name] = required
 

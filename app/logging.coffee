@@ -2,32 +2,25 @@ module.exports = (cfg) ->
   winston = require('winston')
   loggers = {}
 
-  logger_methods = ['log', 'warn', 'info', 'error', 'profile']
-
   class FakeLogger
-    for level in logger_methods
-      @[level] = () ->
+    for level in Object.keys(winston.levels).include('profile')
+      @[level] = ->
 
   class LoggerMiddleware
-    middleLog = (level, class_name) -> (args...) =>
+    middleLog = (level) -> (args...) =>
       if Object.isString args[0]
-        args[0] = "#{@component} (#{class_name}): #{args[0]}"
+        args[0] = "#{@component}: #{args[0]}"
 
       @logger[level].apply @logger, args
 
     constructor: (@component, @logger) ->
       @component = @component.spacify()
 
-      for level in logger_methods
-        @[level] = middleLog.apply this, [level, 'core']
+      for level in Object.keys(@logger.levels).include('profile')
+        @[level] = middleLog.apply this, [level]
 
     category: (class_name) ->
-      category = {}
-
-      for level in logger_methods
-        category[level] = middleLog.apply this, [level, class_name]
-
-      return category
+      new LoggerMiddleware "#{@component} (#{class_name})", @logger
 
   return (component) ->
     if loggers[component]?
