@@ -15,7 +15,7 @@ blacksam =
 # Create the App (obviously) and initialize it
 blacksam.init app = express(), 'controllers', (err) ->
   if err?
-    (app.log?.error ? console.log) "Error occurred during the load of BlackSam core: %s", (err?.message ? 'unknown'), err
+    (app.log?.error ? console.log) "Error occurred during the load of BlackSam core", err
     return console.trace()
 
   # Remove the Workers helper from the context

@@ -11,7 +11,7 @@ blacksam =
 # Initialize the core and load the Workers
 blacksam.init app = express(), 'workers', (err) ->
   if err?
-    (app.log?.error ? console.log) "Error occurred during the load of BlackSam core: %s", (err?.message ? 'unknown'), err
+    (app.log?.error ? console.log) "Error occurred during the load of BlackSam core", err
     return console.trace()
 
   # Start Workers

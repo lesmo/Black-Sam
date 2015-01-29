@@ -40,7 +40,9 @@ module.exports = (helpers, cfg, log) ->
       , (err) ->
         if cfg.enabled 'die on max worker fails'
           log.error "Worker {#{name}} failed max number of times, killing BlackSam", err
+          console.trace()
           process.exit 1
         else
           log.error "Worker {#{name}} failed max number of times, won't be restarted", err
+          console.trace()
           fail_callback? err
