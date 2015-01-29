@@ -15,10 +15,7 @@ module.exports = (app, components..., callback) ->
   async   = require 'async'
   logging = require "#{__dirname}/logging"
 
-  autoload = (dir, obj = {}, args..., callback) ->
-    if args?.length > 0
-      args = args.flatten()
-
+  autoload = (dir, obj = {}, args = [], logger, callback) ->
     async.waterfall [
       # Read files in directory
       (next_step) ->
@@ -55,6 +52,7 @@ module.exports = (app, components..., callback) ->
               return next_file new Error('blacksam.core.loadError')
 
             if typeof required is 'function'
+              args.push logger?.category class_name
               obj[class_name] = required.apply null, args
             else
               obj[class_name] = required
@@ -77,7 +75,7 @@ module.exports = (app, components..., callback) ->
   async.waterfall [
     # Load settings
     (next_step) ->
-      autoload "#{__dirname}/../config", null, write_config, next_step
+      autoload "#{__dirname}/../config", null, [write_config], null, next_step
 
     # Tweak settings
     (next_step) ->
@@ -118,7 +116,8 @@ module.exports = (app, components..., callback) ->
 
       autoload "#{__dirname}/helpers"
         , app.helpers = {}
-        , [app.helpers, readonly_config, logger 'blacksam-helpers']
+        , [app.helpers, readonly_config]
+        , logger('blacksam-helpers')
         , (err) ->
           next_step err, logger
 
@@ -132,7 +131,8 @@ module.exports = (app, components..., callback) ->
 
           autoload "#{__dirname}/#{component}"
             , app[component] ? app[component] = {}
-            , [app.helpers, readonly_config, logger "blacksam-#{component}"]
+            , [app.helpers, readonly_config]
+            , logger("blacksam-#{component}")
             , next_component
         , next_step
 

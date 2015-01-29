@@ -9,15 +9,25 @@ module.exports = (cfg) ->
       @[level] = () ->
 
   class LoggerMiddleware
-    middleLog = (level) -> (args...) ->
+    middleLog = (level, class_name) -> (args...) =>
       if Object.isString args[0]
-        args[0] = "#{@component.spacify()}: #{args[0]}"
+        args[0] = "#{@component} (#{class_name}): #{args[0]}"
 
       @logger[level].apply @logger, args
 
     constructor: (@component, @logger) ->
+      @component = @component.spacify()
+
       for level in logger_methods
-        @[level] = middleLog(level)
+        @[level] = middleLog.apply this, [level, 'core']
+
+    category: (class_name) ->
+      category = {}
+
+      for level in logger_methods
+        category[level] = middleLog.apply this, [level, class_name]
+
+      return category
 
   return (component) ->
     if loggers[component]?
