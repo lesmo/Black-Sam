@@ -22,6 +22,7 @@
     "morgan": "^1.5.0",
     "multer": "^0.1.6",
     "node-timeout": "0.0.4",
+    "node-tracker": "0.0.6",
     "parse-torrent": "^3.0.0",
     "q": "^1.1.2",
     "search-index": "^0.4.9",
@@ -29,11 +30,14 @@
     "serve-static": "^1.7.1",
     "stylus": "*",
     "sugar": "^1.4.1",
+    "torrent-stream": "^0.16.2",
     "underscore": "^1.7.0",
-    "webtorrent": "^0.21.0",
     "winston": "^0.8.3"
   },
   "main": "blacksam-web.js",
+  "scripts": {
+    "start": "node blacksam-web.js"
+  },
   "engines": {
     "node": "0.10.25",
     "npm": "1.1.x"

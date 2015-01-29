@@ -20,7 +20,7 @@ module.exports = (helpers, cfg, log) ->
     conflict_solution = (torrent_path) ->
       async.apply helpers.fs.move, torrent_path, "#{torrent_path}.#{conflict_rename_ext}"
   else
-    log.error "[Indexer] Invalid conflict solution {#{conflict_solution}}: dying"
+    log.error "Invalid conflict solution {#{conflict_solution}}"
     return undefined
 
   return (finish) ->
@@ -32,7 +32,7 @@ module.exports = (helpers, cfg, log) ->
     user_dirs = helpers.fs.readdirSync marianne_path
 
     if user_dirs.length < 1
-      log.info "[Indexer] Directory {marianne} contains no User Directories"
+      log.info "Directory {marianne} contains no User Directories"
       return finish()
 
     stats =
@@ -60,13 +60,14 @@ module.exports = (helpers, cfg, log) ->
             calculated_user_path = "#{marianne_path}/#{valid_user_hash}"
 
             if current_user_path is calculated_user_path
-              async.nextTick -> next_step null, calculated_user_path
+              async.nextTick ->
+                next_step null, calculated_user_path
             else
               helpers.fs.move current_user_path, calculated_user_path, {clobber: true}, (err) ->
                 if err
-                  log.error "[Indexer] Unable to rename User Directory [#{user_hash}] to [#{valid_user_hash}]"
+                  log.error "Unable to rename User Directory [#{user_hash}] to [#{valid_user_hash}]"
                 else
-                  log.warn "[Indexer] Renamed User Directory [#{user_hash}] to [#{valid_user_hash}]"
+                  log.warn "Renamed User Directory [#{user_hash}] to [#{valid_user_hash}]"
 
                 next_step err, calculated_user_path
 
@@ -105,8 +106,6 @@ module.exports = (helpers, cfg, log) ->
                   # Calculate categorization of Torrent
                   (next_index_step) ->
                     torrent_subpath = torrent_path.from user_path.length
-                    torrent_hash    = torrent_subpath.match(/([0-9A-F]{40})\.torrent$/)[1]
-
                     [..., category, subcategory, nil] = torrent_subpath.split path.sep
 
                     if not subcategory?
@@ -138,12 +137,14 @@ module.exports = (helpers, cfg, log) ->
                     try
                       torrent = parse_torrent torrent_buffer
                     catch e
-                      return async.nextTick -> next_index_step new Error('blacksam.indexer.torrentParseError')
+                      return async.nextTick ->
+                        next_index_step new Error('blacksam.indexer.torrentParseError')
 
                     file_hash = torrent_path.match /\.([0-9A-F]{40})\.torrent$/
 
                     if not file_hash?
-                      return async.nextTick -> next_index_step new Error('blacksam.indexer.invalidFileName')
+                      return async.nextTick ->
+                        next_index_step new Error('blacksam.indexer.invalidFileName')
 
                     if file_hash[1] is torrent.infoHash.toUpperCase()
                       next_index_step null, torrent, category, subcategory
@@ -160,7 +161,8 @@ module.exports = (helpers, cfg, log) ->
 
                           next_index_step err, torrent, category, subcategory
                       else
-                        async.nextTick -> next_index_step new Error('blacksam.indexer.invalidFileName')
+                        async.nextTick ->
+                          next_index_step new Error('blacksam.indexer.invalidFileName')
 
                   # Determine if it's in the Search Index and update accordingly
                   (torrent, category, subcategory, next_index_step) ->
@@ -233,12 +235,13 @@ module.exports = (helpers, cfg, log) ->
                     async.parallel [
                       async.apply helpers.search.index.del, torrent.id
                       conflict_solution torrent_path
-                    ], () ->
+                    ], ->
                       next_file null, null
                   else if err.message?.match /^blacksam\.indexer/
                     # If whatever error is triggered internally, at BlackSam level
                     # it's considered a conflict
-                    conflict_solution(torrent_path) () -> next_file null, null
+                    conflict_solution(torrent_path) ->
+                      next_file null, null
                   else
                     next_file err
               , next_step
@@ -262,13 +265,13 @@ module.exports = (helpers, cfg, log) ->
               else
                 sub_err = 'unexpected'
 
-            log.warn "[Indexer] User directory [#{user_hash}] skipped: #{sub_err}",
+            log.warn "User directory [#{user_hash}] skipped: #{sub_err}",
               processed: processed
               skipped  : skipped
 
             stats.users_skipped++
           else
-            log.warn "[Indexer] User directory [#{user_hash}] processed",
+            log.warn "User directory [#{user_hash}] processed",
               processed: processed
               skipped  : skipped
 
@@ -277,8 +280,8 @@ module.exports = (helpers, cfg, log) ->
           next_user()
       , (err) ->
         if err
-          log.error "[Indexer] Import failed", stats
+          log.error "Indexing failed", stats
           finish err
         else
-          log.info "[Indexer] Import finished", stats
+          log.info "Indexing finished", stats
           finish()

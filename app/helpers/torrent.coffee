@@ -1,21 +1,25 @@
 module.exports = (helpers, cfg, log) ->
   string_decoder = new (require 'string_decoder').StringDecoder('utf8')
-  parse_torrent = require 'parse-torrent'
-  async = require 'async'
-  path = require 'path'
+  parse_torrent  = require 'parse-torrent'
+  async          = require 'async'
+  path           = require 'path'
 
-  Timeout = require('node-timeout')
-  Tracker = require('bittorrent-tracker').Client
+  TorrentStream = require 'torrent-stream'
+  Tracker       = require 'node-tracker'
+  Timeout       = require 'node-timeout'
 
-  torrent_timeout = Timeout cfg.get('torrent process timeout'), err: new Error('blacksam.torrent.processTimeout')
+  torrent_timeout =
+    Timeout cfg.get('torrent process timeout'),
+      err: new Error('blacksam.torrent.processTimeout')
+
+  trackers =
+    for url in cfg.get 'torrent trackers'
+      new Tracker("#{url}#{if not url.endsWith('/announce') then '/announce'}")
 
   ###
     Facilitates processing Torrents and their metadata.
   ###
   class TorrentHelper
-    ### WebTorrent Client Instance ###
-    @client = new require('webtorrent') tracker: cfg.get 'torrent trackers'
-
     ###
       Validates that a given String is a (possibly) valid InfoHash.
 
@@ -28,7 +32,7 @@ module.exports = (helpers, cfg, log) ->
       Calculates the Path a Torrent file(s) should be located at given
       it's uploader, categories and info-hash.
 
-      @param userhash (String|Object) User Hash of the uploader, or a Torrent Metadata object.
+      @param userhash (String|Object) User Hash of the uploader, or a Indexable Torrent object.
       @param category (String) Category of the Torrent.
       @param subcategory (String) Sub-category of the Torrent.
       @param hash (String) The info-hash of the Torrent.
@@ -62,13 +66,6 @@ module.exports = (helpers, cfg, log) ->
         subcategory,
         hash
 
-    @remove = (torrent_id) ->
-      torrent = @client.get torrent_id
-
-      if torrent?
-        torrent.destroy()
-        @client.remove torrent.infoHash ? torrent
-
     ###
       Find a Torrent in a Tracker, or via DHT, and return it in a callback.
       It's resource is not released nor removed from the list, that should be
@@ -78,73 +75,60 @@ module.exports = (helpers, cfg, log) ->
       @param torrent_id (String|Object) A Parse-Torrent result, a Magnet URI or a Buffer of a *.torrent file
     ###
     @get = (torrent_id, callback) ->
-      try
-        torrent_id = parse_torrent torrent_id
-      catch e
-        return async.nextTick -> callback e
+      if torrent_id.infoHash?
+        torrent_id = parse_torrent.toTorrentFile torrent_id
 
-      @client.add torrent_id, {tmp: cfg.get 'sultanna path'}, torrent_timeout (torrent) =>
-        if torrent is 'blacksam.torrent.processTimeout' or not torrent?
-          log.warn "Metadata retrieval for Torrent [#{torrent?.infoHash or 'removed'}] timed-out"
-          @remove torrent
+      torrent_engine = TorrentStream torrent_id,
+        tmp     : cfg.get 'sultanna path'
+        trackers: cfg.get 'torrent trackers'
 
-          if torrent is 'blacksam.torrent.processTimeout'
-            callback new Error('blacksam.torrent.processTimeout')
-          else
-            callback new Error('blacksam.torrent.notFound')
+      torrent_engine.once 'ready', (err) ->
+        if err?
+          torrent_engine.destroy ->
+            callback err
         else
-          callback null, torrent
+          callback null, torrent_engine
 
-    @findTrackers = (torrent, count..., callback) ->
-      trackers_searching = cfg.get 'torrent trackers'
-      trackers_found = []
-
-      count = count[0] ? 3
-      count = 1 if count < 1
-
-      for tracker_url in trackers_searching
-        @scrape tracker_url, torrent.infoHash, (err, torrent, data) ->
-          return if err
-          return if trackers_found.length is count
-
-          trackers_found.add data.announce
-
-          if trackers_searching.length is 0
-            callback new Error('blacksam.torrent.noTrackerForTorrent')
-          else
-            callback null, trackers_found
-
-    @scrape = (tracker_urls..., torrent, callback) ->
+    @scrape = (tracker_urls..., torrent_engine, callback) ->
       try
-        info_hash = torrent?.infoHash ? parse_torrent(torrent).infoHash
+        info_hash = (torrent_engine?.torrent?.infoHash) ? (torrent_engine?.infoHash) ? (parse_torrent(torrent_engine)?.infoHash)
 
         if not info_hash?
           throw new Error()
       catch e
-        return async.nextTick -> callback new Error('blacksam.torrent.scrape.invalidTorrent')
+        return async.nextTick ->
+          callback new Error('blacksam.torrent.scrape.invalidTorrent')
 
       if tracker_urls.length > 0
         trackers = tracker_urls.flatten()
       else
-        trackers = cfg.get('torrent trackers')
+        trackers = cfg.get 'torrent trackers'
 
         if torrent.announceList?.length > 0
           trackers = trackers.include torrent.announceList, 0
         if torrent.announce?.length > 0
           trackers = trackers.include torrent.announce, 0
 
-      async.detect trackers.compact()
-        , (tracker_url, win) ->
-          Tracker.scrape tracker_url, info_hash, (err, data) ->
-            win err ? Object.merge(data, announce: tracker_url)
-        , torrent_timeout (data) ->
-          if data.announce?
-            callback null, data
+      async.map trackers
+        , (tracker, next_tracker) ->
+          tracker.scrape info_hash, (err, data) ->
+            if err?
+              next_tracker null, null
+            else
+              next_tracker err, Object.merge(data, announce: tracker.trackerUri)
+        , (err, data) ->
+          if err?
+            callback err, data
           else
-            callback data,
-              announce: undefined
-              complete: -1
-              incomplete: -1
+            data = data.compact()
+
+            if data.length is 0
+              callback null,
+                announce: undefined
+                complete: -1
+                incomplete: -1
+            else
+              callback null, data[0]
 
     @getIndexable = (torrent) ->
       indexable_files_string =
@@ -157,17 +141,17 @@ module.exports = (helpers, cfg, log) ->
         .join(' ')
         .compact()
       indexable_name_string =
-        torrent.parsedTorrent.name
+        torrent.name
         .parameterize()
         .spacify()
         .compact()
 
       return {
         id: torrent.infoHash.toUpperCase()
-        magnet: parse_torrent.toMagnetURI torrent.parsedTorrent
+        magnet: parse_torrent.toMagnetURI torrent
         uploader: undefined
 
-        title: torrent.parsedTorrent.name
+        title: torrent.name
         title_ix: indexable_name_string
         description: ''
 
@@ -185,7 +169,7 @@ module.exports = (helpers, cfg, log) ->
       }
 
     ###
-      Find a Torrent's Metadata and return a Torrent Metadata Object, used for
+      Find a Torrent's Metadata and return an Indexable Torrent, used for
       Search Indexing. Only {uploader}, {category} and {subcategory} cannot be
       set by this method and they'll reference an undefined uploader account
       and the "Others" category, with no sub-category.
@@ -196,19 +180,20 @@ module.exports = (helpers, cfg, log) ->
       async.waterfall [
         (next) =>
           @get torrent_id, next
-        (torrent, next) =>
-          @scrape torrent, next
-        (torrent, data, next) =>
-          indexable_metadata = @getIndexable torrent
+
+        (torrent_engine, next) =>
+          @scrape torrent_engine.torrent, (err, data) ->
+            next err, torrent_engine, data
+
+        (torrent_engine, data, next) =>
+          indexable_metadata = @getIndexable torrent_engine.torrent
           indexable_metadata.seeders  = data.complete
           indexable_metadata.leechers = data.incomplete
 
-          next null, indexable_metadata, torrent
-      ], (err, indexable_metadata, torrent) =>
-        async.nextTick ->
-          callback err, indexable_metadata, torrent.parsedTorrent
-
-        @remove torrent?.infoHash
+          next null, indexable_metadata, torrent_engine
+      ], (err, indexable_metadata, torrent_engine) ->
+        torrent_engine.destroy ->
+          callback err, indexable_metadata
 
     ###
       Check if a given Torrent exists. Simply that.
@@ -216,6 +201,6 @@ module.exports = (helpers, cfg, log) ->
       @param torrent_id (String|Object) A Parse-Torrent result, a Magnet URI or a Buffer of a *.torrent file
     ###
     @exists = (torrent_id, callback) ->
-      @get torrent_id, (err, torrent) =>
-        @remove torrent
-        callback not err? and torrent?
+      @get torrent_id, (err, torrent_engine) ->
+        torrent_engine.destroy ->
+          callback not err? and torrent?

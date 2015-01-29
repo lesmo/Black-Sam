@@ -15,8 +15,8 @@ module.exports = (helpers, cfg, log) ->
       # Filter-out any unknown file types
       (filepaths, next_step) ->
         async.filter filepaths
-          , (path, cb) ->
-            cb path.match /\.(torrent|magnet)$/i
+          , (path, _if) ->
+            _if path.match /\.(torrent|magnet)$/i
           , (new_filepaths) ->
             log.info "Processing #{new_filepaths.length} Torrents"
             next_step null, new_filepaths
@@ -41,9 +41,9 @@ module.exports = (helpers, cfg, log) ->
                 helpers.torrent.get magnet, next
 
               # Convert to Torrent file Buffer
-              (torrent, next) ->
-                parsed_torrent = torrent.parsedTorrent
-                helpers.torrent.remove torrent
+              (torrent_engine, next) ->
+                parsed_torrent = torrent_engine.torrent
+                torrent_engine.destroy()
 
                 if parsed_torrent?
                   try
