@@ -21,7 +21,6 @@
     "markdown": "^0.5.0",
     "morgan": "^1.5.0",
     "multer": "^0.1.6",
-    "node-timeout": "0.0.4",
     "node-tracker": "0.0.6",
     "parse-torrent": "^3.0.0",
     "q": "^1.1.2",
