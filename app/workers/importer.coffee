@@ -25,10 +25,12 @@ module.exports = (helpers, cfg, log) ->
       async.waterfall [
         # Retrieve all paths inside {sultanna path}/import folder
         (next_step) ->
+          log.verbose "Traversing import directory", path: "#{cfg.sultanna_path}/import"
           helpers.fs.traverseDir "#{cfg.sultanna_path}/import", next_step
 
         # Filter-out any unknown file types
         (filepaths, next_step) ->
+          log.verbose "Filtering non-torrent files...", total: filepaths.length
           async.filter filepaths
             , (path, _if) ->
               _if path.match /\.(torrent|magnet)$/i
@@ -38,6 +40,7 @@ module.exports = (helpers, cfg, log) ->
 
         # Convert Magnet Links to Torrent files
         (filepaths, next_step) ->
+          log.verbose "Converting *.magnet into *.torrent files..."
           async.mapLimit filepaths
             , cfg.batch_size
             , (filepath, next_file) ->
@@ -53,6 +56,7 @@ module.exports = (helpers, cfg, log) ->
 
                 # Find Torrent metadata
                 (magnet, next) ->
+                  log.verbose "Finding metadata for Magnet Link...", magnet: magnet
                   helpers.torrent.get magnet, next
 
                 # Convert to Torrent file Buffer
@@ -71,18 +75,29 @@ module.exports = (helpers, cfg, log) ->
                 # Write to *.torrent file
                 (info_hash, buffer, next) ->
                   new_filepath = filepath.replace /[^/]+$/, "#{info_hash.toUpperCase()}.torrent"
+                  log.verbose "Writing Torrent file...", path: new_filepath
 
                   helpers.fs.outputFile new_filepath, buffer, (err) ->
+                    if not err?
+                      log.verbose "Written Torrent file", path: new_filepath
                     next err, new_filepath
 
                 # Delete *.magnet file
                 (new_filepath, next) ->
+                  log.verbose "Deleting Magnet file...", path: filepath
                   helpers.fs.remove filepath, (err) ->
+                    if not err?
+                      log.verbose "Deleted Magnet file", path: filepath
+                    else
+                      log.verbose "Error while deleing Magnet file", path: filepath, err
+
                     next null, new_filepath
               ], (err, new_filepath) ->
                 if err
+                  log.verbose "Torrent will be skipped (error occured)", {path: new_filepath, error: err}
                   next_file null, null
                 else
+                  log.verbose "Torrent processed", path: new_filepath
                   next_file null, new_filepath
             , (err, new_filepaths) ->
               new_filepaths = new_filepaths.compact()
@@ -96,6 +111,7 @@ module.exports = (helpers, cfg, log) ->
 
         # Rename Torrent files to {infoHash}.torrent
         (filepaths, next_step) ->
+          log.verbose "Renaming *.torrent files to {info_hash}.torrent ...", total: filepaths.length
           async.mapLimit filepaths
             , cfg.batch_size
             , (filepath, next_file) ->
@@ -115,14 +131,22 @@ module.exports = (helpers, cfg, log) ->
 
                 (new_filepath, next) ->
                   if filepath is new_filepath
-                    async.nextTick -> next null, new_filepath
+                    async.nextTick ->
+                      log.verbose "Torrent already has correct name", path: filepath
+                      next null, new_filepath
                   else
+                    log.verbose "Renaming Torrent...", path: filepath
                     helpers.fs.move filepath, new_filepath, {clobber: true}, (err) ->
+                      if not err?
+                        log.verbose "Torrent renamed", path: new_filepath
+
                       next err, new_filepath
               ], (err, new_filepath) ->
                 if err
+                  log.verbose "Error ocurred while renaming Torrent", {path: filepath, new_path: new_filepath}
                   next_file null, null
                 else
+                  log.verbose "Torrent renamed", path: filepath
                   next_file null, new_filepath
             , (err, new_filepaths) ->
               new_filepaths = new_filepaths.compact()
@@ -137,7 +161,11 @@ module.exports = (helpers, cfg, log) ->
         # Calculate userdirs (and locks if required)
         (filepaths, next_step) ->
           if filepaths.length is 0
-            return async.nextTick -> next_step null, {}, {}
+            return async.nextTick ->
+              log.verbose "Skipping userdir creation"
+              next_step null, {}, {}
+
+          log.verbose "Preparing random userdirs..."
 
           files_per_dir    = cfg.random_userdir_torrents
           folders_torrents = {}
@@ -170,27 +198,44 @@ module.exports = (helpers, cfg, log) ->
                 folders_torrents[random_userpath] =
                   filepaths[i * files_per_dir ..]
 
-          async.nextTick -> next_step null, folders_torrents, folders_locks
+              log.verbose "Created %s userdirs (locking: %s)", userdirs.length, cfg.lock_random_userdir
+
+          async.nextTick ->
+            next_step null, folders_torrents, folders_locks
 
         # Move Torrent files
         (folders_torrents, folders_locks, next_step) ->
+
           queue =
             for folder, torrents of folders_torrents
               for torrent in torrents
                 tmp : torrent
                 dest: "#{folder}/#{torrent.match(/[^/]+$/)[0]}"
+          queue = queue.flatten()
 
-          async.mapLimit queue.flatten()
-            , cfg.batch_size
-            , (item, next) ->
-              helpers.fs.move item.tmp, item.dest, (err) ->
-                next null, err ? null
-            , (err, res) ->
-              skipped = res.compact().length
-              moved   = res.length - skipped
+          if queue.length < 1
+            log.verbose "No Torrent files to move"
+            next_step null, folders_locks
+          else
+            log.verbose "Moving Torrent files..."
 
-              log.info "#{moved} Torrents moved (#{skipped} skipped)"
-              next_step null, folders_locks
+            async.mapLimit queue.flatten()
+              , cfg.batch_size
+              , (item, next) ->
+                log.verbose "Moving Torrent file...", path: item.tmp
+                helpers.fs.move item.tmp, item.dest, (err) ->
+                  if err?
+                    log.verbose "Error while moving Torrent file", err
+                  else
+                    log.verbose "Torrent file moved", path: item.dest
+
+                  next null, err ? null
+              , (err, res) ->
+                skipped = res.compact().length
+                moved   = res.length - skipped
+
+                log.info "#{moved} Torrents moved (#{skipped} skipped)"
+                next_step null, folders_locks
 
         # Create lock files
         (folder_locks, next_step) ->
@@ -198,16 +243,22 @@ module.exports = (helpers, cfg, log) ->
             for path, hash of folder_locks
               path: path
               hash: hash
+          queue = queue.flatten()
 
-          async.mapLimit queue.flatten()
-            , cfg.batch_size
-            , (item, next) ->
-              helpers.fs.outputFile item.path, item.hash, (err) ->
-                next null, err ? null
-            , (err, res) ->
-              skipped = res.compact().length
-              created = res.length - skipped
+          if queue.length < 1
+            next_step()
+          else
+            log.verbose "Creating user locks..."
 
-              log.info "#{created} User Locks created (#{skipped} skipped)"
-              next_step()
+            async.mapLimit queue
+              , cfg.batch_size
+              , (item, next) ->
+                helpers.fs.outputFile item.path, item.hash, (err) ->
+                  next null, err ? null
+              , (err, res) ->
+                skipped = res.compact().length
+                created = res.length - skipped
+
+                log.info "#{created} User Locks created (#{skipped} skipped)"
+                next_step()
       ], finish

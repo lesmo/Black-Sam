@@ -7,7 +7,7 @@
 module.exports = (cfg) ->
   # This is the logging level of BlackSam. Available levels are
   # 'info', 'warn' and 'error'. Comment this line to disable it.
-  cfg.set 'log level', 'info'
+  cfg.set 'log level', 'verbose'
 
   # This makes BlackSam output logs ONLY to the console. Useful
   # during development.

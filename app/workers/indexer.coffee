@@ -50,6 +50,8 @@ module.exports = (helpers, cfg, log) ->
     async.eachLimit user_dirs
       , cfg.batch_size
       , (user_hash, next_user) ->
+        log.verbose "Indexing Torrents in [%s] ...", user_hash
+
         async.waterfall [
           # Check if it's a valid User Hash dir
           (next_step) ->
