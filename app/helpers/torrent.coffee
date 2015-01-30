@@ -15,6 +15,9 @@ module.exports = (helpers, cfg, log) ->
     marianne_path: cfg.get 'marianne path'
     sultanna_path: cfg.get 'sultanna path'
 
+    conflict_solution: cfg.get 'torrent conflict solution'
+    conflict_rename_ext: cfg.get 'torrent conflict extension'
+
     torrent_trackers: cfg.get 'torrent trackers'
     timeout: cfg.get 'torrent process timeout'
 
@@ -80,9 +83,13 @@ module.exports = (helpers, cfg, log) ->
       if torrent_id.infoHash?
         torrent_id = parse_torrent.toTorrentFile torrent_id
 
-      torrent_engine = TorrentStream torrent_id,
-        tmp     : cfg.sultanna_path
-        trackers: cfg.torrent_trackers
+      try
+        torrent_engine = TorrentStream torrent_id,
+          tmp     : cfg.sultanna_path
+          trackers: cfg.torrent_trackers
+      catch e
+        return async.nextTick ->
+          callback e
 
       torrent_engine.once 'ready', ->
         if timeout?
@@ -231,3 +238,12 @@ module.exports = (helpers, cfg, log) ->
       @get torrent_id, (err, torrent_engine) ->
         torrent_engine.destroy ->
           callback not err? and torrent?
+
+    if cfg.conflict_solution is 'delete'
+      @solveConflict = (torrent_path, callback) ->
+        helpers.fs.remove torrent_path, callback
+    else if cfg.conflict_solution is 'rename'
+      @solveConflict = (torrent_path, callback) ->
+        helpers.fs.move torrent_path, "#{torrent_path}.#{cfg.conflict_rename_ext}", callback
+    else
+      log.error "Invalid conflict solution {#{cfg.conflict_solution}}"

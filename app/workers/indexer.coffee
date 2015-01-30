@@ -11,23 +11,10 @@ module.exports = (helpers, cfg, log) ->
   cfg =
     marianne_path: cfg.get 'marianne path'
 
-    conflict_solution: cfg.get 'torrent conflict solution'
-    conflict_rename_ext: cfg.get 'torrent conflict extension'
-
     batch_size: cfg.get 'torrent index worker batch'
     update_time_threshold: cfg.get 'torrent update time threshold'
 
     categories: cfg.get 'categories'
-
-  if cfg.conflict_solution is 'delete'
-    cfg.conflict_solution = (torrent_path) ->
-      async.apply helpers.fs.remove, torrent_path
-  else if cfg.conflict_solution is 'rename'
-    cfg.conflict_solution = (torrent_path) ->
-      async.apply helpers.fs.move, torrent_path, "#{torrent_path}.#{cfg.conflict_rename_ext}"
-  else
-    log.error "Invalid conflict solution {#{cfg.conflict_solution}}"
-    return undefined
 
   return (finish) ->
     try
@@ -240,7 +227,7 @@ module.exports = (helpers, cfg, log) ->
                     # delete it from the Search Index and solve it as a conflict
                     async.parallel [
                       async.apply helpers.search.index.del, torrent.id
-                      cfg.conflict_solution torrent_path
+                      async.apply helpers.torrent.solveConflict, torrent_path
                     ], ->
                       next_file null, null
                   else if err.message?.match /^blacksam\.indexer/

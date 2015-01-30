@@ -94,7 +94,9 @@ module.exports = (helpers, cfg, log) ->
               ], (err, new_filepath) ->
                 if err
                   log.verbose "Torrent will be skipped (error occured)", {path: new_filepath, error: err}
-                  next_file null, null
+
+                  helpers.torrent.solveConflict filepath, ->
+                    next_file null, null
                 else
                   log.verbose "Torrent processed", path: new_filepath
                   next_file null, new_filepath
