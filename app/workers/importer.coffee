@@ -75,7 +75,6 @@ module.exports = (helpers, cfg, log) ->
                 # Write to *.torrent file
                 (info_hash, buffer, next) ->
                   new_filepath = filepath.replace /[^/]+$/, "#{info_hash.toUpperCase()}.torrent"
-                  log.verbose "Writing Torrent file...", path: new_filepath
 
                   helpers.fs.outputFile new_filepath, buffer, (err) ->
                     if not err?
@@ -89,7 +88,7 @@ module.exports = (helpers, cfg, log) ->
                     if not err?
                       log.verbose "Deleted Magnet file", path: filepath
                     else
-                      log.verbose "Error while deleing Magnet file", path: filepath, err
+                      log.verbose "Error while deleting Magnet file", path: filepath, err
 
                     next null, new_filepath
               ], (err, new_filepath) ->

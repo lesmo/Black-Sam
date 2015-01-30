@@ -16,6 +16,7 @@ module.exports = (helpers, cfg, log) ->
     sultanna_path: cfg.get 'sultanna path'
 
     torrent_trackers: cfg.get 'torrent trackers'
+    timeout: cfg.get 'torrent process timeout'
 
   ###
     Facilitates processing Torrents and their metadata.
@@ -83,12 +84,19 @@ module.exports = (helpers, cfg, log) ->
         tmp     : cfg.sultanna_path
         trackers: cfg.torrent_trackers
 
-      torrent_engine.once 'ready', (err) ->
-        if err?
-          torrent_engine.destroy ->
-            callback err
-        else
+      torrent_engine.once 'ready', ->
+        if timeout?
+          clearTimeout timeout
           callback null, torrent_engine
+
+      timeout = setTimeout ->
+        clearTimeout timeout
+        timeout = undefined
+
+        torrent_engine.removeAllListeners 'ready'
+        torrent_engine.destroy ->
+          callback new Error('blacksam.torrent.getTimeout')
+      , cfg.timeout
 
     @scrape = (tracker_urls..., torrent_engine, callback) ->
       try
@@ -119,19 +127,15 @@ module.exports = (helpers, cfg, log) ->
 
       async.eachSeries trackers.include(tmp_trackers, 0)
         , (tracker, next) ->
-          scrape_callback = (err, d) ->
+          if Object.isString tracker
+            tracker = new Tracker tracker
+
+          tracker.scrape info_hash, {timeout: cfg.timeout}, (err, d) ->
             if err?
               next null
             else
-              data = Object.merge d, announce: tracker.trackerUri
+              data = Object.merge d, announce: "#{tracker.trackerUri}/announce"
               next 'found.it'
-
-          if Object.isString tracker
-            tracker = new Tracker tracker
-            tracker.once 'ready', ->
-              tracker.scrape info_hash, scrape_callback
-          else
-            tracker.scrape info_hash, scrape_callback
         , (err) ->
           tmp_trackers =
             tmp_trackers.filter (i) -> typeof i is 'object'
