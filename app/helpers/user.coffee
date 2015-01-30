@@ -1,4 +1,7 @@
 module.exports = (helpers, cfg, log) ->
+  cfg =
+    marianne_path: cfg.get 'marianne path'
+
   ###
     Facilitates the interaction with User Accounts, their folders, hashing and validations.
   ###
@@ -39,7 +42,7 @@ module.exports = (helpers, cfg, log) ->
       hash = @validHash hash
 
       if hash?
-        return "#{cfg.get 'marianne path'}/#{@validHash hash}"
+        return "#{cfg.marianne_path}/#{@validHash hash}"
       else
         return undefined
 

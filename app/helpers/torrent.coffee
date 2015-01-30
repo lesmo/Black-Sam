@@ -6,15 +6,16 @@ module.exports = (helpers, cfg, log) ->
 
   TorrentStream = require 'torrent-stream'
   Tracker       = require 'node-tracker'
-  Timeout       = require 'node-timeout'
-
-  torrent_timeout =
-    Timeout cfg.get('torrent process timeout'),
-      err: new Error('blacksam.torrent.processTimeout')
 
   trackers =
     for url in cfg.get 'torrent trackers'
       new Tracker("#{url}#{if not url.endsWith('/announce') then '/announce'}")
+
+  cfg =
+    marianne_path: cfg.get 'marianne path'
+    sultanna_path: cfg.get 'sultanna path'
+
+    torrent_trackers: cfg.get 'torrent trackers'
 
   ###
     Facilitates processing Torrents and their metadata.
@@ -60,7 +61,7 @@ module.exports = (helpers, cfg, log) ->
       subcategory = subcategory.toUpperCase()
       hash        = hash.toUpperCase()
 
-      return path.join cfg.get('marianne path'),
+      return path.join cfg.marianne_path,
         userhash,
         category,
         subcategory,
@@ -79,8 +80,8 @@ module.exports = (helpers, cfg, log) ->
         torrent_id = parse_torrent.toTorrentFile torrent_id
 
       torrent_engine = TorrentStream torrent_id,
-        tmp     : cfg.get 'sultanna path'
-        trackers: cfg.get 'torrent trackers'
+        tmp     : cfg.sultanna_path
+        trackers: cfg.torrent_trackers
 
       torrent_engine.once 'ready', (err) ->
         if err?
@@ -102,7 +103,7 @@ module.exports = (helpers, cfg, log) ->
       if tracker_urls.length > 0
         trackers = tracker_urls.flatten()
       else
-        trackers = cfg.get 'torrent trackers'
+        trackers = cfg.torrent_trackers
 
         if torrent.announceList?.length > 0
           trackers = trackers.include torrent.announceList, 0

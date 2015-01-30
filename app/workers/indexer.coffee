@@ -8,28 +8,34 @@ module.exports = (helpers, cfg, log) ->
   async = require 'async'
   path = require 'path'
 
-  marianne_path = cfg.get 'marianne path'
+  cfg =
+    marianne_path: cfg.get 'marianne path'
 
-  conflict_solution = cfg.get 'torrent conflict solution'
-  conflict_rename_ext = cfg.get 'torrent conflict extension'
+    conflict_solution: cfg.get 'torrent conflict solution'
+    conflict_rename_ext: cfg.get 'torrent conflict extension'
 
-  if conflict_solution is 'delete'
-    conflict_solution = (torrent_path) ->
+    batch_size: cfg.get 'torrent index worker batch'
+    update_time_threshold: cfg.get 'torrent update time threshold'
+
+    categories: cfg.get 'categories'
+
+  if cfg.conflict_solution is 'delete'
+    cfg.conflict_solution = (torrent_path) ->
       async.apply helpers.fs.remove, torrent_path
-  else if conflict_solution is 'rename'
-    conflict_solution = (torrent_path) ->
-      async.apply helpers.fs.move, torrent_path, "#{torrent_path}.#{conflict_rename_ext}"
+  else if cfg.conflict_solution is 'rename'
+    cfg.conflict_solution = (torrent_path) ->
+      async.apply helpers.fs.move, torrent_path, "#{torrent_path}.#{cfg.conflict_rename_ext}"
   else
-    log.error "Invalid conflict solution {#{conflict_solution}}"
+    log.error "Invalid conflict solution {#{cfg.conflict_solution}}"
     return undefined
 
   return (finish) ->
     try
-      helpers.fs.ensureDirSync marianne_path
+      helpers.fs.ensureDirSync cfg.marianne_path
     catch e
       return finish e
 
-    user_dirs = helpers.fs.readdirSync marianne_path
+    user_dirs = helpers.fs.readdirSync cfg.marianne_path
 
     if user_dirs.length < 1
       log.info "Directory {marianne} contains no User Directories"
@@ -42,7 +48,7 @@ module.exports = (helpers, cfg, log) ->
       torrents_ignored: 0
 
     async.eachLimit user_dirs
-      , cfg.get('torrent index worker batch')
+      , cfg.batch_size
       , (user_hash, next_user) ->
         async.waterfall [
           # Check if it's a valid User Hash dir
@@ -56,8 +62,8 @@ module.exports = (helpers, cfg, log) ->
 
           # Check if BlackSam-generated-paths match current User Path
           (valid_user_hash, next_step) ->
-            current_user_path    = "#{marianne_path}/#{user_hash}"
-            calculated_user_path = "#{marianne_path}/#{valid_user_hash}"
+            current_user_path    = "#{cfg.marianne_path}/#{user_hash}"
+            calculated_user_path = "#{cfg.marianne_path}/#{valid_user_hash}"
 
             if current_user_path is calculated_user_path
               async.nextTick ->
@@ -100,7 +106,7 @@ module.exports = (helpers, cfg, log) ->
             log.info "[Indexer] Processing User Directory [#{user_hash}] (#{file_paths.length} files) ..."
 
             async.mapLimit file_paths
-              , cfg.get('torrent index worker batch')
+              , cfg.batch_size
               , (torrent_path, next_file) ->
                 async.waterfall [
                   # Calculate categorization of Torrent
@@ -117,12 +123,10 @@ module.exports = (helpers, cfg, log) ->
                     category    = category.toLowerCase()
                     subcategory = category.toLowerCase()
 
-                    valid_categorization = cfg.get('categories')
-
-                    if not valid_categorization[category]?
+                    if not cfg.categories[category]?
                       return next_index_step new Error('blacksam.indexer.invalidTorrentCategorization')
 
-                    if subcategory isnt '' and not valid_categorization[category].has(subcategory)
+                    if subcategory isnt '' and not cfg.categories[category].has(subcategory)
                       return next_index_step new Error('blacksam.indexer.invalidTorrentCategorization')
 
                     next_index_step null, category, subcategory
@@ -197,7 +201,7 @@ module.exports = (helpers, cfg, log) ->
                       (torrent, next) ->
                         torrent_last_accessed = new Date torrent.accessed
                         torrent_last_updated  = new Date torrent.updated
-                        time_threshold = cfg.get 'torrent update time threshold'
+                        time_threshold = cfg.update_time_threshold
 
                         if torrent_last_accessed > torrent_last_updated.advance time_threshold
                           next null, torrent
@@ -234,13 +238,13 @@ module.exports = (helpers, cfg, log) ->
                     # delete it from the Search Index and solve it as a conflict
                     async.parallel [
                       async.apply helpers.search.index.del, torrent.id
-                      conflict_solution torrent_path
+                      cfg.conflict_solution torrent_path
                     ], ->
                       next_file null, null
                   else if err.message?.match /^blacksam\.indexer/
                     # If whatever error is triggered internally, at BlackSam level
                     # it's considered a conflict
-                    conflict_solution(torrent_path) ->
+                    cfg.conflict_solution(torrent_path) ->
                       next_file null, null
                   else
                     next_file err
