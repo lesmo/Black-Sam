@@ -83,7 +83,6 @@ module.exports = (helpers, cfg, log) ->
 
                 # Delete *.magnet file
                 (new_filepath, next) ->
-                  log.verbose "Deleting Magnet file...", path: filepath
                   helpers.fs.remove filepath, (err) ->
                     if not err?
                       log.verbose "Deleted Magnet file", path: filepath
@@ -93,7 +92,7 @@ module.exports = (helpers, cfg, log) ->
                     next null, new_filepath
               ], (err, new_filepath) ->
                 if err
-                  log.verbose "Torrent will be skipped (error occured)", {path: new_filepath, error: err}
+                  log.verbose "Torrent will be skipped (error occured)", {path: filepath, error: err}
 
                   helpers.torrent.solveConflict filepath, ->
                     next_file null, null
@@ -136,10 +135,11 @@ module.exports = (helpers, cfg, log) ->
                       log.verbose "Torrent already has correct name", path: filepath
                       next null, new_filepath
                   else
-                    log.verbose "Renaming Torrent...", path: filepath
                     helpers.fs.move filepath, new_filepath, {clobber: true}, (err) ->
                       if not err?
                         log.verbose "Torrent renamed", path: new_filepath
+                      else
+                        log.verbose "Torrent renaming failed", err
 
                       next err, new_filepath
               ], (err, new_filepath) ->

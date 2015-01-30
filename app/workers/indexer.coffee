@@ -233,7 +233,7 @@ module.exports = (helpers, cfg, log) ->
                   else if err.message?.match /^blacksam\.indexer/
                     # If whatever error is triggered internally, at BlackSam level
                     # it's considered a conflict
-                    cfg.conflict_solution(torrent_path) ->
+                    helpers.torrent.solveConflict torrent_path, ->
                       next_file null, null
                   else
                     next_file err

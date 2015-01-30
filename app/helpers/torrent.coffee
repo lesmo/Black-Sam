@@ -80,10 +80,10 @@ module.exports = (helpers, cfg, log) ->
       @param torrent_id (String|Object) A Parse-Torrent result, a Magnet URI or a Buffer of a *.torrent file
     ###
     @get = (torrent_id, callback) ->
-      if torrent_id.infoHash?
-        torrent_id = parse_torrent.toTorrentFile torrent_id
-
       try
+        if torrent_id.infoHash?
+          torrent_id = parse_torrent.toTorrentFile torrent_id
+
         torrent_engine = TorrentStream torrent_id,
           tmp     : cfg.sultanna_path
           trackers: cfg.torrent_trackers
