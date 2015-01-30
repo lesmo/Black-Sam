@@ -18,7 +18,7 @@ module.exports = (helpers, cfg, log) ->
   else
     return (finish) ->
       try
-        helpers.fs.ensureDirSync cfg.sultanna_path
+        helpers.fs.ensureDirSync "#{cfg.sultanna_path}/import"
       catch e
         return finish e
 
