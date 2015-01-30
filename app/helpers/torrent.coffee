@@ -9,7 +9,7 @@ module.exports = (helpers, cfg, log) ->
 
   trackers =
     for url in cfg.get 'torrent trackers'
-      new Tracker("#{url}#{if not url.endsWith('/announce') then '/announce'}")
+      new Tracker url
 
   cfg =
     marianne_path: cfg.get 'marianne path'
@@ -103,33 +103,55 @@ module.exports = (helpers, cfg, log) ->
       if tracker_urls.length > 0
         trackers = tracker_urls.flatten()
       else
-        trackers = cfg.torrent_trackers
+        trackers = cfg.torrent_trackers.randomize()
+        tmp_trackers = []
+
+        if torrent.announce?.length > 0
+          tmp_trackers = tmp_trackers.include torrent.announce
 
         if torrent.announceList?.length > 0
-          trackers = trackers.include torrent.announceList, 0
-        if torrent.announce?.length > 0
-          trackers = trackers.include torrent.announce, 0
+          tmp_trackers = tmp_trackers.include torrent.announceList
 
-      async.map trackers
-        , (tracker, next_tracker) ->
-          tracker.scrape info_hash, (err, data) ->
+      data =
+        announce: undefined
+        complete: -1
+        incomplete: -1
+
+      async.eachSeries trackers.include(tmp_trackers, 0)
+        , (tracker, next) ->
+          scrape_callback = (err, d) ->
             if err?
-              next_tracker null, null
+              next null
             else
-              next_tracker err, Object.merge(data, announce: tracker.trackerUri)
-        , (err, data) ->
-          if err?
-            callback err, data
-          else
-            data = data.compact()
+              data = Object.merge d, announce: tracker.trackerUri
+              next 'found.it'
 
-            if data.length is 0
-              callback null,
-                announce: undefined
-                complete: -1
-                incomplete: -1
-            else
-              callback null, data[0]
+          if Object.isString tracker
+            tracker = new Tracker tracker
+            tracker.once 'ready', ->
+              tracker.scrape info_hash, scrape_callback
+          else
+            tracker.scrape info_hash, scrape_callback
+        , (err) ->
+          tmp_trackers =
+            tmp_trackers.filter (i) -> typeof i is 'object'
+
+          if tmp_trackers.length > 0
+            async.each tmp_trackers
+              , (tracker, next) ->
+                log.verbose "Closing Tracker...", tracker: tracker.trackerUri
+
+                tracker.close()
+                next()
+              , ->
+                log.verbose "Closed temporal Trackers"
+
+          if err?.message is 'found.it'
+            log.verbose "Scrape completed for [%s]", info_hash, data
+          else
+            log.verbose "Scrape failed for [%s]", info_hash, data
+
+          callback null, data
 
     @getIndexable = (torrent) ->
       indexable_files_string =
