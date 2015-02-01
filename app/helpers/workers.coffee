@@ -28,15 +28,21 @@ module.exports = (helpers, cfg, log) ->
         workers_running.add name
 
         async.nextTick ->
-          async.retry cfg.get('max worker fails'), work, (err) ->
-            workers_running.remove name
+          async.retry cfg.get('max worker fails')
+            , (finish) ->
+              try
+                work finish
+              catch e
+                finish e
+            , (err) ->
+              workers_running.remove name
 
-            if err
-              next err
-            else if cfg.get "worker #{name} timespan"
-              setTimeout next, cfg.get "worker #{name} timespan"
-            else
-              setTimeout next, cfg.get 'worker timespan'
+              if err
+                next err
+              else if cfg.get "worker #{name} timespan"
+                setTimeout next, cfg.get "worker #{name} timespan"
+              else
+                setTimeout next, cfg.get 'worker timespan'
       , (err) ->
         if cfg.enabled 'die on max worker fails'
           log.error "Worker {#{name}} failed max number of times, killing BlackSam", err
