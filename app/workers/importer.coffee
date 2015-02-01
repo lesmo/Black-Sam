@@ -57,23 +57,21 @@ module.exports = (helpers, cfg, log) ->
                 # Find Torrent metadata
                 (magnet, next) ->
                   log.verbose "Finding metadata for Magnet Link...", magnet: magnet
-                  try
-                    helpers.torrent.get magnet, next
-                  catch e
-                    next e
+                  helpers.torrent.get magnet, next
 
                 # Convert to Torrent file Buffer
                 (torrent_engine, next) ->
-                  parsed_torrent = torrent_engine.torrent
-                  torrent_engine.destroy()
+                  try
+                    parsed_torrent = torrent_engine.torrent
+                    torrent_engine.destroy()
 
-                  if parsed_torrent?
-                    try
-                      next null, parsed_torrent.infoHash, parse_torrent.toTorrentFile(parsed_torrent)
-                    catch e
-                      next e
-                  else
-                    next new Error('blacksam.importer.invalidTorrent')
+                    if parsed_torrent?
+                      try
+                        next null, parsed_torrent.infoHash, parse_torrent.toTorrentFile(parsed_torrent)
+                    else
+                      next new Error('blacksam.importer.invalidTorrent')
+                  catch e
+                    next e
 
                 # Write to *.torrent file
                 (info_hash, buffer, next) ->
