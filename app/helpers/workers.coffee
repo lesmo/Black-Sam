@@ -1,5 +1,6 @@
 module.exports = (helpers, cfg, log) ->
   async = require 'async'
+  trycatch = require 'trycatch'
 
   class WorkersHelper
     workers_running = []
@@ -30,10 +31,10 @@ module.exports = (helpers, cfg, log) ->
         async.nextTick ->
           async.retry cfg.get('max worker fails')
             , (finish) ->
-              try
-                work finish
-              catch e
-                finish e
+              trycatch ->
+                work(finish)
+              , (err) ->
+                finish(err)
             , (err) ->
               workers_running.remove name
 
@@ -44,11 +45,12 @@ module.exports = (helpers, cfg, log) ->
               else
                 setTimeout next, cfg.get 'worker timespan'
       , (err) ->
+        log.error "Worker {#{name}} failed max number of times", err
+
+        if err.stack?
+          console.log err.stack
+
         if cfg.enabled 'die on max worker fails'
-          log.error "Worker {#{name}} failed max number of times, killing BlackSam", err
-          console.trace()
           process.exit 1
         else
-          log.error "Worker {#{name}} failed max number of times, won't be restarted", err
-          console.trace()
           fail_callback? err

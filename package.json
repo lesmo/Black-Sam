@@ -30,6 +30,7 @@
     "stylus": "*",
     "sugar": "^1.4.1",
     "torrent-stream": "^0.16.2",
+    "trycatch": "^1.5.11",
     "underscore": "^1.7.0",
     "winston": "^0.8.3"
   },
