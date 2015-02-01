@@ -104,7 +104,6 @@ module.exports = (helpers, cfg, log) ->
       catch e
         return async.nextTick ->
           callback e
-
     @scrape = (tracker_urls..., torrent_engine, callback) ->
       try
         info_hash = (torrent_engine?.torrent?.infoHash) ? (torrent_engine?.infoHash) ? (parse_torrent(torrent_engine)?.infoHash)

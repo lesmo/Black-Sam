@@ -57,7 +57,10 @@ module.exports = (helpers, cfg, log) ->
                 # Find Torrent metadata
                 (magnet, next) ->
                   log.verbose "Finding metadata for Magnet Link...", magnet: magnet
-                  helpers.torrent.get magnet, next
+                  try
+                    helpers.torrent.get magnet, next
+                  catch e
+                    next e
 
                 # Convert to Torrent file Buffer
                 (torrent_engine, next) ->
