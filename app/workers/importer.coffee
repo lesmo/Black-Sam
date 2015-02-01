@@ -2,6 +2,7 @@ module.exports = (helpers, cfg, log) ->
   parse_torrent = require 'parse-torrent'
   line_reader = require 'line-reader'
   async = require 'async'
+  trycatch = require 'trycatch'
 
   cfg =
     sultanna_path: cfg.get 'sultanna path'
@@ -45,7 +46,8 @@ module.exports = (helpers, cfg, log) ->
             , cfg.batch_size
             , (filepath, next_file) ->
               if not filepath.match /\.magnet$/i
-                return next_file null, filepath
+                return async.nextTick ->
+                  next_file null, filepath
 
               async.waterfall [
                 # Retrieve Magnet Link from file
@@ -56,8 +58,10 @@ module.exports = (helpers, cfg, log) ->
 
                 # Find Torrent metadata
                 (magnet, next) ->
-                  log.verbose "Finding metadata for Magnet Link...", magnet: magnet
-                  helpers.torrent.get magnet, next
+                  trycatch ->
+                    log.verbose "Finding metadata for Magnet Link...", magnet: magnet
+                    helpers.torrent.get magnet, next
+                  , next
 
                 # Convert to Torrent file Buffer
                 (torrent_engine, next) ->
