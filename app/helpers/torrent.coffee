@@ -87,23 +87,23 @@ module.exports = (helpers, cfg, log) ->
         torrent_engine = TorrentStream torrent_id,
           tmp     : cfg.sultanna_path
           trackers: cfg.torrent_trackers
+
+        torrent_engine.once 'ready', ->
+          if timeout?
+            clearTimeout timeout
+            callback null, torrent_engine
+
+        timeout = setTimeout ->
+          clearTimeout timeout
+          timeout = undefined
+
+          torrent_engine.removeAllListeners 'ready'
+          torrent_engine.destroy ->
+            callback new Error('blacksam.torrent.getTimeout')
+        , cfg.timeout
       catch e
         return async.nextTick ->
           callback e
-
-      torrent_engine.once 'ready', ->
-        if timeout?
-          clearTimeout timeout
-          callback null, torrent_engine
-
-      timeout = setTimeout ->
-        clearTimeout timeout
-        timeout = undefined
-
-        torrent_engine.removeAllListeners 'ready'
-        torrent_engine.destroy ->
-          callback new Error('blacksam.torrent.getTimeout')
-      , cfg.timeout
 
     @scrape = (tracker_urls..., torrent_engine, callback) ->
       try
