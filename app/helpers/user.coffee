@@ -53,7 +53,7 @@ module.exports = (helpers, cfg, log) ->
       path = @getPath hash
 
       if path?
-        return fs.existsSync path
+        return helpers.fs.existsSync path
       else
         return false
 
@@ -78,7 +78,7 @@ module.exports = (helpers, cfg, log) ->
       if @exists userhash
         callback new Error('blacksam.user.create.exists')
       else
-        fs.mkdirp @getPath(userhash), (err) ->
+        helpers.fs.mkdirp @getPath(userhash), (err) ->
           if err
             log.error "User Folder [#{userhash}] creation failed", err
           else
@@ -92,7 +92,7 @@ module.exports = (helpers, cfg, log) ->
       if not userpath?
         return 'invalid'
 
-      for file in fs.readdirSync userpath
+      for file in helpers.fs.readdirSync userpath
         display_name = file.match(/^user\.(.+)\.json$/i)?[1]
         return display_name if display_name?
 
@@ -107,8 +107,8 @@ module.exports = (helpers, cfg, log) ->
 
       userhash  = @validHash(userhash).from(2)
 
-      for file in helpers.fs.readdirSync(userpath) when display_name = file.match(/^user\.(.+)\.json$/i)
-        userjson = helpers.fs.readJSONSync "#{userpath}/#{file}"
+      for file in helpers.helpers.fs.readdirSync(userpath) when display_name = file.match(/^user\.(.+)\.json$/i)
+        userjson = helpers.helpers.fs.readJSONSync "#{userpath}/#{file}"
 
         if not userjson?
           continue
