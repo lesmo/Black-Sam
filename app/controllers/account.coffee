@@ -43,7 +43,7 @@ module.exports = (helpers) ->
       Process the creation of an Account.
     ###
     account_create = (req, res, userhash, username, password, password_repeat) ->
-      account_created = (err, userhash) ->
+      account_created = (err) ->
         if err?
           if Object.isArray err
             res.errors.addValidation err
@@ -57,10 +57,10 @@ module.exports = (helpers) ->
       if helpers.user.validHash userhash
         helpers.user.create userhash, account_created
       else
-        if username?.length < 7
+        if not username? or username.length < 7
           res.errors.addValidation 'username'
 
-        if password?.length < 7
+        if not password? or password.length < 7
           res.errors.addValidation 'password'
         else if password_repeat isnt password
           res.errors.addValidation 'password_repeat'
@@ -79,6 +79,7 @@ module.exports = (helpers) ->
       else if not helpers.user.validHash userhash
         res.errors.addFatal 'blacksam.login.invalid'
         return res.render 'account/login'
+
 
       # NOTE: This Login process is "insecure" since capturing the User Hash
       #       in-transit could allow easy impersonation of users. The initial

@@ -67,9 +67,9 @@ module.exports = (helpers, cfg, log) ->
           callback new Error('blacksam.generic.invalidArguments')
 
       if credentials.length is 1
-        userhash = @getHash credentials[0], credentials[1]
-      else
         userhash = @validHash credentials[0]
+      else
+        userhash = @getHash credentials[0], credentials[1]
 
       if not userhash?
         return async.nextTick ->
@@ -80,9 +80,9 @@ module.exports = (helpers, cfg, log) ->
       else
         helpers.fs.mkdirp @getPath(userhash), (err) ->
           if err
-            log.error "User Folder [#{userhash}] creation failed", err
+            log.error "User Folder [1-#{userhash}] creation failed", err
           else
-            log.info "User Folder [#{userhash}] created"
+            log.info "User Folder [1-#{userhash}] created"
 
           callback err, userhash
 
