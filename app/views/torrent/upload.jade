@@ -3,9 +3,14 @@ extends ../layout
 block head
    != css('jquery-loading/dist/jquery.loading')
    != css('css/upload')
+   != css('css/editor')
+   
 block footer_js
    != js('jquery-loading/dist/jquery.loading')
    != js('js/upload')
+   != js('js/editor')
+   != js('js/marked')
+
 block content
    form#formTorrent(method='post')
       input(type='hidden', name='_csrf', value= csrf_token())
@@ -63,7 +68,7 @@ block content
                      h3 Description
                      p You can enter a description here, but you can skip it. This supports <strong>Markdown Syntax</strong>, so you can provide richer descriptions to users about this Torrent. Make an effort to properly describe the Torrent, as this text's contents are used for the search index.
 
-                     p
+                     p#editorDescription
                         textarea#textareaDescription.form-control(style='min-height:300px', name='torrent_description')
 
             // functionality is not ready yet
