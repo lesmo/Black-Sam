@@ -31,7 +31,7 @@ module.exports = (helpers, cfg, log) ->
       regex_match = hash.match /^(1\-)?([0-9A-F]{40})$/i
 
       if regex_match?
-        return "1-#{regex_match[2]}"
+        return "1-#{regex_match[2].toUpperCase()}"
       else
         return undefined
 
@@ -69,7 +69,7 @@ module.exports = (helpers, cfg, log) ->
       if credentials.length is 1
         userhash = @getHash credentials[0], credentials[1]
       else
-        userhash = credentials[0]
+        userhash = @validHash credentials[0]
 
       if not userhash?
         return async.nextTick ->
