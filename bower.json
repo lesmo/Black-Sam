@@ -27,6 +27,7 @@
     "bootswatch-dist": "3.3.1+2-slate",
     "lt-ie-9": "~0.1.0",
     "cryptojslib": "~3.1.2",
-    "jquery-loading": "~1.0.3"
+    "jquery-loading": "~1.0.3",
+    "marked": "https://github.com/chjj/marked.git#~0.3.3"
   }
 }
