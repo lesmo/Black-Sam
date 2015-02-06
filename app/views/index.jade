@@ -29,7 +29,7 @@ block body
             form(method='get', action='/search')
               .form-group
                 label(for='search-box').sr-only Search
-                input(type='text', name='q', placeholder='Search the seven seas').form-control.input-lg#search-box
+                input(type='text', name='q', placeholder='Search the seven seas', required='required').form-control.input-lg#search-box
 
               .btn-group
                 button(type='submit').btn.btn-lg.btn-primary Search
