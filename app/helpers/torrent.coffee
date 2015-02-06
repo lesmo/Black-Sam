@@ -97,8 +97,12 @@ module.exports = (helpers, cfg, log) ->
           clearTimeout timeout
           timeout = undefined
 
-          torrent_engine.removeAllListeners 'ready'
-          torrent_engine.destroy ->
+          torrent_engine.removeAllListeners? 'ready'
+
+          if torrent_engine?.destroy?
+            torrent_engine.destroy ->
+              callback new Error('blacksam.torrent.getTimeout')
+          else
             callback new Error('blacksam.torrent.getTimeout')
         , cfg.timeout
       catch e
@@ -225,8 +229,12 @@ module.exports = (helpers, cfg, log) ->
 
           next null, indexable_metadata, torrent_engine
       ], (err, indexable_metadata, torrent_engine) ->
-        torrent_engine.destroy ->
+        if torrent_engine?.destroy?
+          torrent_engine.destroy ->
+            callback err, indexable_metadata
+        else
           callback err, indexable_metadata
+
 
     ###
       Check if a given Torrent exists. Simply that.
@@ -235,7 +243,10 @@ module.exports = (helpers, cfg, log) ->
     ###
     @exists = (torrent_id, callback) ->
       @get torrent_id, (err, torrent_engine) ->
-        torrent_engine.destroy ->
+        if torrent_engine?.destroy?
+          torrent_engine.destroy ->
+            callback not err? and torrent?
+        else
           callback not err? and torrent?
 
     if cfg.conflict_solution is 'delete'
