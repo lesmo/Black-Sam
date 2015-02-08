@@ -133,7 +133,7 @@ module.exports = (helpers, cfg, log) ->
                       return async.nextTick ->
                         next_index_step new Error('blacksam.indexer.torrentParseError')
 
-                    file_hash = torrent_path.match /\.([0-9A-F]{40})\.torrent$/
+                    file_hash = torrent_path.match /([0-9A-F]{40})\.torrent$/
 
                     if not file_hash?
                       return async.nextTick ->
@@ -200,6 +200,8 @@ module.exports = (helpers, cfg, log) ->
                       switch err?.message ? 'blacksam.indexer.notIndexed'
                         when 'blacksam.indexer.notIndexed'
                           next_index_step null, torrent, category, subcategory
+                        when 'blacksam.importer.itemUpdateNotNeeded'
+                          next_index_step null
                         else
                           next_index_step err
 
@@ -221,6 +223,9 @@ module.exports = (helpers, cfg, log) ->
                 ], (err, torrent) ->
                   if not err?
                     return next_file null, torrent
+
+                  if not torrent?
+                    return next_file null, null
 
                   if err.message is 'blacksam.indexer.invalidTorrentInIndex'
                     # If there's a Torrent in the index that generated invalid path,
