@@ -115,7 +115,7 @@ module.exports = (helpers, cfg, log) ->
                     if not cfg.categories[category]?
                       return next_index_step new Error('blacksam.indexer.invalidTorrentCategorization')
 
-                    if subcategory isnt '' and not cfg.categories[category].has(subcategory)
+                    if subcategory isnt '' and not cfg.categories[category].any(subcategory)
                       return next_index_step new Error('blacksam.indexer.invalidTorrentCategorization')
 
                     next_index_step null, category, subcategory
