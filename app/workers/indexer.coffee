@@ -25,7 +25,7 @@ module.exports = (helpers, cfg, log) ->
     user_dirs = helpers.fs.readdirSync cfg.marianne_path
 
     if user_dirs.length < 1
-      log.info "Directory {marianne} contains no User Directories"
+      log.warn "Directory {marianne} contains no User Directories"
       return finish()
 
     stats =
@@ -199,7 +199,7 @@ module.exports = (helpers, cfg, log) ->
                     ], (err, torrent) ->
                       switch err?.message ? 'blacksam.indexer.notIndexed'
                         when 'blacksam.indexer.notIndexed'
-                          next_index_step torrent, category, subcategory
+                          next_index_step null, torrent, category, subcategory
                         else
                           next_index_step err
 
@@ -229,11 +229,13 @@ module.exports = (helpers, cfg, log) ->
                       async.apply helpers.search.index.del, torrent.id
                       async.apply helpers.torrent.solveConflict, torrent_path
                     ], ->
+                      log.warn "Invalid ID [%s] removed from Index", torrent.id
                       next_file null, null
                   else if err.message?.match /^blacksam\.indexer/
                     # If whatever error is triggered internally, at BlackSam level
                     # it's considered a conflict
                     helpers.torrent.solveConflict torrent_path, ->
+                      log.warn "Unexpected error processing [%s] resolved as conflict", torrent.id
                       next_file null, null
                   else
                     next_file err
