@@ -16,7 +16,7 @@ module.exports = (app) ->
 
   # Favicon goes before Morgan because otherwise we're
   # getting a shit-ton of useless lines in logs
-  #app.use serve_favicon "#{__dirname}/assets/favicon.ico"
+  app.use serve_favicon "#{__dirname}/static/favicon.ico"
 
   # These are quite obvious
   app.use serve_static "#{__dirname}/static"
