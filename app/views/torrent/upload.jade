@@ -2,11 +2,6 @@ extends ../layout
 
 block head
    != css('css/upload')
-   != css('css/editor')
-   
-block footer_js
-   != js('js/editor')
-   != js('marked/lib/marked')
 
 block content
    form#formTorrent(method='post')
