@@ -81,9 +81,6 @@ module.exports = (helpers, cfg, log) ->
     ###
     @get = (torrent_id, callback) ->
       try
-        if torrent_id.infoHash?
-          torrent_id = parse_torrent.toTorrentFile torrent_id
-
         torrent_engine = TorrentStream torrent_id,
           tmp     : cfg.sultanna_path
           trackers: cfg.torrent_trackers
@@ -108,9 +105,17 @@ module.exports = (helpers, cfg, log) ->
       catch e
         return async.nextTick ->
           callback e
+
     @scrape = (tracker_urls..., torrent_engine, callback) ->
       try
-        info_hash = (torrent_engine?.torrent?.infoHash) ? (torrent_engine?.infoHash) ? (parse_torrent(torrent_engine)?.infoHash)
+        if torrent_engine.torrent?.infoHash?
+          torrent = torrent_engine.torrent
+        else if torrent_engine.infoHash?
+          torrent = torrent_engine
+        else
+          torrent = parse_torrent(torrent_engine)
+
+        info_hash = torrent.infoHash
 
         if not info_hash?
           throw new Error()
@@ -234,7 +239,6 @@ module.exports = (helpers, cfg, log) ->
             callback err, indexable_metadata
         else
           callback err, indexable_metadata
-
 
     ###
       Check if a given Torrent exists. Simply that.

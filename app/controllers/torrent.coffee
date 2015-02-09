@@ -43,22 +43,18 @@ module.exports = (helpers, cfg, log) ->
 
         if category?.length is 2
           subcategory = category[1]
-        else
-          subcategory = 'other'
 
         category = category?[0]
 
         if not cfg.get('categories')[category]?
           res.errors.addValidation 'torrent_category'
-        else if not cfg.get('categories')[category].find(subcategory)?
+        else if subcategory? and not cfg.get('categories')[category].find(subcategory)?
           res.errors.addValidation 'torrent_category', 'Invalid subcategory ' + subcategory
 
         if req.files?.torrent_file?
           torrent = parse_torrent fs.readFileSync(req.files.torrent_file.path)
         else if req.body.torrent_magnet?.length > 20
           torrent = parse_torrent req.body.torrent_magnet
-        else
-          torrent = 0
 
         if not torrent?
           res.errors.addFatal 'blacksam.upload.invalid'
