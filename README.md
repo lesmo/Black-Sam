@@ -100,4 +100,4 @@ There's already [Isohunt's OpenBay](https://github.com/isohuntto/openbay) effort
 Contributions are welcome, but you should probably create an issue first. We're currently hanging out on IRC if you want to talk:
 
 * ```#BlackSam``` @ **freenode.net**
-* ```#default```  @ **irc.hydra.net** (SSL enabled at port 6697)
+* ```#default```  @ **irc.hydra.ws** (SSL enabled at port 6697)
