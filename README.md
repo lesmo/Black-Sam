@@ -95,3 +95,9 @@ It just so happens that this project has (hopefully) those -and probably more- t
 
 ### ... why Node.js?
 There's already [Isohunt's OpenBay](https://github.com/isohuntto/openbay) effort to create something very similar to this, and it would probably be easier to use build on top of that. However, using PHP might not be as simple for many users to use and setup locally as this project's trying to be. Not to mention that the possibility of a Node-Webkit application is very promising.
+
+## Contributing
+Contributions are welcome, but you should probably create an issue first. We're currently hanging out on IRC if you want to talk:
+
+* ```#BlackSam``` @ **freenode.net**
+* ```#default```  @ **irc.hydra.net** (SSL enabled at port 6697)
